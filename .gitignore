@@ -26,3 +26,8 @@
 *.exe
 *.out
 *.app
+TAG*
+
+#Makefiles
+Makefile
+*.make
