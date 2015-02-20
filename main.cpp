@@ -8,13 +8,78 @@
 #include <glload/gl_load.hpp>
 #include <GL/glfw.h>
 
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/swizzle.hpp>
+
 // shut up :'(
 #define GL_TRUE                 1
 #define GL_FALSE                0
 
+namespace util{
+    struct Camera{
+        Camera(): 
+            pos(0.0,0.0,0.0),
+            dir(0.0,0.0,-1.0),
+            up(0.0,1.0,0.0),
+            aspectRatio(4.0f / 3.0f),
+            fov(45.0f), near(1.0f), far(999.0f){}
+
+        glm::mat4 projection() const{
+            return glm::perspective(fov, aspectRatio, near, far); 
+        }
+
+        void translate(const glm::vec3& translation){
+            pos += translation;
+        }
+
+        glm::vec3 rightVector() const {
+            return glm::cross(dir, up);
+        }
+
+        void rotateYaw(float degrees) {
+            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), -degrees, up) * glm::vec4(dir, 0.0f));
+        }
+
+        void rotatePitch(float degrees) {
+            auto right = rightVector();
+            up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, right) * glm::vec4(dir, 0.0f));
+            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, right) * glm::vec4(dir, 0.0f));
+        }
+
+        void rotateRoll(float degrees) {
+            up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, dir) * glm::vec4(dir, 0.0f));
+        }
+
+        glm::mat4 modelView() const {
+            return glm::lookAt(pos, pos + dir, up);
+        }
+
+        void forward(float distance) {
+            glm::normalize(dir);
+            pos += dir * distance;
+        }
+
+        void pan(glm::vec2 panning){
+            glm::normalize(dir);
+            glm::normalize(up);
+            auto right = rightVector();
+            pos += right * -panning.x;
+            pos += up * panning.y;
+        }
+
+        glm::vec3 pos, dir, up;
+        float aspectRatio, fov, near, far;
+    };
+}
+
 GLuint positionBufferObject;
 GLuint program;
 GLuint vao;
+util::Camera cam;
+GLint modelview, projection;
 
 GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 {
@@ -56,13 +121,23 @@ GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 
 void init()
 {
+    gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    gl::Enable(gl::DEPTH_TEST);
+    gl::DepthFunc(gl::LEQUAL);
+   // gl::Enable(gl::CULL_FACE);
+   // gl::CullFace(gl::BACK);
+   // gl::PolygonMode(gl::FRONT, gl::FILL);
+
     gl::GenVertexArrays(1, &vao);
     gl::BindVertexArray(vao);
 
     const float vertexPositions[] = {
-        0.75f, 0.75f, 0.0f, 1.0f,
-        0.75f, -0.75f, 0.0f, 1.0f,
-        -0.75f, -0.75f, 0.0f, 1.0f,
+        -1.0f, -1.0f, -5.0f,
+         1.0f,  1.0f, -5.0f,
+        -1.0f,  1.0f, -5.0f,
+         1.0f,  1.0f, -5.0f,
+        -1.0f, -1.0f, -5.0f,
+         1.0f, -1.0f, -5.0f,
     };
 
     gl::GenBuffers(1, &positionBufferObject);
@@ -73,11 +148,31 @@ void init()
     const std::string vertexShader(
         "#version 330\n"
         "layout(location = 0) in vec4 position;\n"
+        "uniform mat4 ModelView;\n"
+        "uniform mat4 Projection;\n"
         "void main()\n"
         "{\n"
-        "   gl_Position = position;\n"
+        "   gl_Position = Projection * ModelView * position;\n"
+       // "   gl_Position = position;\n"
         "}\n"
         );
+
+/*#version 150
+
+in vec4 position;
+in vec4 color;
+in vec2 texture_coord;
+out vec4 color_from_vshader;
+out vec2 texture_coord_from_vshader;
+
+uniform mat4 ModelView;
+uniform mat4 Projection;
+
+void main() {
+    gl_Position = Projection * ModelView * position;
+    color_from_vshader = color;
+    texture_coord_from_vshader = texture_coord;
+}*/
 
     const std::string fragmentShader(
         "#version 330\n"
@@ -113,20 +208,33 @@ void init()
 
         throw std::runtime_error("Shader could not be linked.");
     }
+
+
+    // modelview = program.getUniformLocation("ModelView");
+    modelview = gl::GetUniformLocation(program, "ModelView");
+    // projection = program.getUniformLocation("Projection");
+    projection = gl::GetUniformLocation(program, "Projection");
 }
 
 void display()
 {
-    gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    // gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     gl::Clear(gl::COLOR_BUFFER_BIT);
 
     gl::UseProgram(program);
 
+        // modelview = program.getUniformLocation("ModelView");
+    modelview = gl::GetUniformLocation(program, "ModelView");
+    // projection = program.getUniformLocation("Projection");
+    projection = gl::GetUniformLocation(program, "Projection");
+    gl::UniformMatrix4fv(modelview, 1, GL_FALSE, glm::value_ptr(cam.modelView()));
+    gl::UniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(cam.projection()));
+
     gl::BindBuffer(gl::ARRAY_BUFFER, positionBufferObject);
     gl::EnableVertexAttribArray(0);
-    gl::VertexAttribPointer(0, 4, gl::FLOAT, GL_FALSE, 0, 0);
+    gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
 
-    gl::DrawArrays(gl::TRIANGLES, 0, 3);
+    gl::DrawArrays(gl::TRIANGLES, 0, 6);
 
     gl::DisableVertexAttribArray(0);
     gl::UseProgram(0);
@@ -221,6 +329,22 @@ int main(int argc, char** argv)
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED))
         {
             break;
+        }
+        if(glfwGetKey('W'))
+        {
+            cam.forward(0.1);
+        }
+        if(glfwGetKey('S'))
+        {
+            cam.forward(-0.1);
+        }
+        if(glfwGetKey('A'))
+        {
+            cam.rotateYaw(-1);
+        }
+        if(glfwGetKey('D'))
+        {
+            cam.rotateYaw(1);
         }
     }
 
