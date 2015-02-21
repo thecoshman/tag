@@ -79,7 +79,6 @@ GLuint positionBufferObject;
 GLuint program;
 GLuint vao;
 util::Camera cam;
-GLint modelview, projection;
 
 GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 {
@@ -132,6 +131,12 @@ void init()
     gl::BindVertexArray(vao);
 
     const float vertexPositions[] = {
+        -1.0f, -1.0f, -4.0f,
+         1.0f,  1.0f, -4.0f,
+        -1.0f,  1.0f, -4.0f,
+         1.0f,  1.0f, -4.0f,
+        -1.0f, -1.0f, -4.0f,
+         1.0f, -1.0f, -4.0f,
         -1.0f, -1.0f, -5.0f,
          1.0f,  1.0f, -5.0f,
         -1.0f,  1.0f, -5.0f,
@@ -208,25 +213,18 @@ void main() {
 
         throw std::runtime_error("Shader could not be linked.");
     }
-
-
-    // modelview = program.getUniformLocation("ModelView");
-    modelview = gl::GetUniformLocation(program, "ModelView");
-    // projection = program.getUniformLocation("Projection");
-    projection = gl::GetUniformLocation(program, "Projection");
 }
 
 void display()
 {
-    // gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     gl::Clear(gl::COLOR_BUFFER_BIT);
+    gl::Clear(gl::DEPTH_BUFFER_BIT);
 
     gl::UseProgram(program);
 
-        // modelview = program.getUniformLocation("ModelView");
-    modelview = gl::GetUniformLocation(program, "ModelView");
-    // projection = program.getUniformLocation("Projection");
-    projection = gl::GetUniformLocation(program, "Projection");
+
+    GLint modelview = gl::GetUniformLocation(program, "ModelView");
+    GLint projection = gl::GetUniformLocation(program, "Projection");
     gl::UniformMatrix4fv(modelview, 1, GL_FALSE, glm::value_ptr(cam.modelView()));
     gl::UniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(cam.projection()));
 
@@ -234,7 +232,7 @@ void display()
     gl::EnableVertexAttribArray(0);
     gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
 
-    gl::DrawArrays(gl::TRIANGLES, 0, 6);
+    gl::DrawArrays(gl::TRIANGLES, 0, 12);
 
     gl::DisableVertexAttribArray(0);
     gl::UseProgram(0);
@@ -332,19 +330,19 @@ int main(int argc, char** argv)
         }
         if(glfwGetKey('W'))
         {
-            cam.forward(0.1);
+            cam.forward(0.1f);
         }
         if(glfwGetKey('S'))
         {
-            cam.forward(-0.1);
+            cam.forward(-0.1f);
         }
         if(glfwGetKey('A'))
         {
-            cam.rotateYaw(-1);
+            cam.rotateYaw(-1.0f);
         }
         if(glfwGetKey('D'))
         {
-            cam.rotateYaw(1);
+            cam.rotateYaw(1.0f);
         }
     }
 
