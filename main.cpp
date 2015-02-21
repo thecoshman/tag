@@ -80,6 +80,7 @@ GLuint indexBufferObject;
 GLuint program;
 GLuint vao;
 util::Camera cam;
+int points = 0;
 
 GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 {
@@ -124,26 +125,14 @@ void init()
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     gl::Enable(gl::DEPTH_TEST);
     gl::DepthFunc(gl::LEQUAL);
-   // gl::Enable(gl::CULL_FACE);
-   // gl::CullFace(gl::BACK);
-   // gl::PolygonMode(gl::FRONT, gl::FILL);
+   gl::Enable(gl::CULL_FACE);
+   gl::CullFace(gl::BACK);
+   gl::PolygonMode(gl::FRONT, gl::FILL);
 
     gl::GenVertexArrays(1, &vao);
     gl::BindVertexArray(vao);
 
     const float vertexPositions[] = {
-/*        -1.0f, -1.0f, -4.0f,
-         1.0f,  1.0f, -4.0f,
-        -1.0f,  1.0f, -4.0f,
-         1.0f,  1.0f, -4.0f,
-        -1.0f, -1.0f, -4.0f,
-         1.0f, -1.0f, -4.0f,
-        -1.0f, -1.0f, -5.0f,
-         1.0f,  1.0f, -5.0f,
-        -1.0f,  1.0f, -5.0f,
-         1.0f,  1.0f, -5.0f,
-        -1.0f, -1.0f, -5.0f,
-         1.0f, -1.0f, -5.0f,*/
         -0.5, -0.5, -0.5,
         -0.5, -0.5,  0.5,
         -0.5,  0.5,  0.5,
@@ -249,6 +238,7 @@ void main() {
 
         throw std::runtime_error("Shader could not be linked.");
     }
+    cam.pos = glm::vec3(10,0,10);
 }
 
 void display()
@@ -270,7 +260,6 @@ void display()
     gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
 
 //    gl::DrawArrays(gl::TRIANGLES, 0, 12);
-
     gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
 
     gl::DisableVertexAttribArray(0);
@@ -319,6 +308,15 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
     printf("%s from %s,\t%s priority\nMessage: %s\n",
         errorType.c_str(), srcName.c_str(), typeSeverity.c_str(), message);
 }
+
+bool checkCollision(){
+    if(cam.pos.x < -0.5f){ return false; }
+    if(cam.pos.x >  0.5f){ return false; }
+    if(cam.pos.z < -0.5f){ return false; }
+    if(cam.pos.z >  0.5f){ return false; }
+    return true;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -377,11 +375,27 @@ int main(int argc, char** argv)
         }
         if(glfwGetKey('A'))
         {
-            cam.rotateYaw(-1.0f);
+            cam.rotateYaw(-1.5f);
         }
         if(glfwGetKey('D'))
         {
-            cam.rotateYaw(1.0f);
+            cam.rotateYaw(1.5f);
+        }
+        if(glfwGetKey('P'))
+        {
+            printf("You are at (%f, %f, %f)", cam.pos.x, cam.pos.y, cam.pos.z);
+        }
+
+        if(checkCollision())
+        {
+            points++;
+            printf("You got the box! You now have %i points\n", points);
+            if(points >= 3)
+            {
+                printf(" you winned!\n");
+                break;
+            }
+            cam.pos = glm::vec3(10,0,10);
         }
     }
 
