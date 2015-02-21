@@ -76,6 +76,7 @@ namespace util{
 }
 
 GLuint positionBufferObject;
+GLuint indexBufferObject;
 GLuint program;
 GLuint vao;
 util::Camera cam;
@@ -131,7 +132,7 @@ void init()
     gl::BindVertexArray(vao);
 
     const float vertexPositions[] = {
-        -1.0f, -1.0f, -4.0f,
+/*        -1.0f, -1.0f, -4.0f,
          1.0f,  1.0f, -4.0f,
         -1.0f,  1.0f, -4.0f,
          1.0f,  1.0f, -4.0f,
@@ -142,13 +143,48 @@ void init()
         -1.0f,  1.0f, -5.0f,
          1.0f,  1.0f, -5.0f,
         -1.0f, -1.0f, -5.0f,
-         1.0f, -1.0f, -5.0f,
+         1.0f, -1.0f, -5.0f,*/
+        -0.5, -0.5, -0.5,
+        -0.5, -0.5,  0.5,
+        -0.5,  0.5,  0.5,
+        -0.5,  0.5, -0.5,
+
+        -0.5, -0.5,  0.5,
+         0.5, -0.5,  0.5,
+         0.5,  0.5,  0.5,
+        -0.5,  0.5,  0.5,
+
+         0.5, -0.5,  0.5,
+         0.5, -0.5, -0.5,
+         0.5,  0.5, -0.5,
+         0.5,  0.5,  0.5,
+
+         0.5, -0.5, -0.5,
+        -0.5, -0.5, -0.5,
+        -0.5,  0.5, -0.5,
+         0.5,  0.5, -0.5,
     };
 
     gl::GenBuffers(1, &positionBufferObject);
     gl::BindBuffer(gl::ARRAY_BUFFER, positionBufferObject);
     gl::BufferData(gl::ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, gl::STATIC_DRAW);
     gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+
+    const GLuint indexdata[] = {
+         0, 1, 2,
+         2, 3, 0,
+         4, 5, 6, 
+         6, 7, 4,
+         8, 9,10,
+        10,11, 8,
+        12,13,14,
+        14,15,12,
+    };
+
+    gl::GenBuffers(1, &indexBufferObject);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, indexBufferObject);
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, sizeof(indexdata), indexdata, gl::STATIC_DRAW);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
 
     const std::string vertexShader(
         "#version 330\n"
@@ -229,10 +265,13 @@ void display()
     gl::UniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(cam.projection()));
 
     gl::BindBuffer(gl::ARRAY_BUFFER, positionBufferObject);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, indexBufferObject);
     gl::EnableVertexAttribArray(0);
     gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
 
-    gl::DrawArrays(gl::TRIANGLES, 0, 12);
+//    gl::DrawArrays(gl::TRIANGLES, 0, 12);
+
+    gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
 
     gl::DisableVertexAttribArray(0);
     gl::UseProgram(0);
