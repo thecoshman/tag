@@ -1,0 +1,4 @@
+[submodule "GLDR"]
+	path = GLDR
+	url = git@github.com:GLDRorg/GLDR.git
+	branch = thecoshman

@@ -8,7 +8,11 @@ solution "TAG"
 project "TAG"
     kind "ConsoleApp"
     language "c++"
-    files {"*.cpp", "*.h"}
+    includedirs {"GLDR/src"}
+    files {
+        "src/**.cpp",
+        "src/**.h"
+    }
     
     UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "glfw", "boost"}
 
