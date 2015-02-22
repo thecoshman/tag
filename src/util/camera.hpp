@@ -11,7 +11,7 @@ namespace util{
             aspectRatio(4.0f / 3.0f),
             fov(45.0f), near(1.0f), far(999.0f){}
 
-        glm::mat4 projection() const{
+        glm::mat4 projectionMatrix() const{
             return glm::perspective(fov, aspectRatio, near, far); 
         }
 
@@ -37,8 +37,12 @@ namespace util{
             up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, dir) * glm::vec4(dir, 0.0f));
         }
 
-        glm::mat4 modelView() const {
+        glm::mat4 viewMatrix() const {
             return glm::lookAt(pos, pos + dir, up);
+        }
+
+        glm::mat4 mvpMatric(const glm::mat4 modelMatrix) const {
+            return projectionMatrix() * viewMatrix() * modelMatrix;
         }
 
         void forward(float distance) {

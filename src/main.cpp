@@ -24,6 +24,7 @@
 #include "util/camera.hpp"
 
 util::Camera cam;
+float boxY = 0.0f;
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -38,11 +39,10 @@ void initShader(gldr::Program& program){
     std::string vertexShaderCode(
         "#version 330\n"
         "layout(location = 0) in vec4 position;\n"
-        "uniform mat4 ModelView;\n"
-        "uniform mat4 Projection;\n"
+        "uniform mat4 mvpMat;\n"
         "void main()\n"
         "{\n"
-        "   gl_Position = Projection * ModelView * position;\n"
+        "   gl_Position = mvpMat * position;\n"
         "}\n"
     );
 
@@ -108,10 +108,9 @@ void display(gldr::Program& program, gldr::VertexArray& vao){
     vao.bind();
     program.use();
 
-    GLint modelview = program.getUniformLocation("ModelView");
-    GLint projection = program.getUniformLocation("Projection");
-    gl::UniformMatrix4fv(modelview, 1, GL_FALSE, glm::value_ptr(cam.modelView()));
-    gl::UniformMatrix4fv(projection, 1, GL_FALSE, glm::value_ptr(cam.projection()));
+    auto modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, boxY, 0.0f));
+    GLint mvpMat = program.getUniformLocation("mvpMat");
+    gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(cam.projectionMatrix() * cam.viewMatrix() * modelMatrix));
 
     gl::EnableVertexAttribArray(0);
     gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
@@ -176,7 +175,7 @@ int main(int argc, char** argv){
     glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
 #endif
 
-    if(!glfwOpenWindow(500, 500, 8, 8, 8, 8, 24, 8, GLFW_WINDOW)){
+    if(!glfwOpenWindow(800, 600, 8, 8, 8, 8, 24, 8, GLFW_WINDOW)){
         glfwTerminate();
         return -1;
     }
@@ -223,6 +222,12 @@ int main(int argc, char** argv){
         }
         if(glfwGetKey('D')){
             cam.rotateYaw(1.5f);
+        }
+        if(glfwGetKey('Q')){
+            boxY += 0.1f;
+        }
+        if(glfwGetKey('E')){
+            boxY -= 0.1f;
         }
         if(glfwGetKey('P')){
             printf("You are at (%f, %f, %f)", cam.pos.x, cam.pos.y, cam.pos.z);
