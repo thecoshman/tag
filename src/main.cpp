@@ -1,5 +1,6 @@
 #include <string>
 #include <exception>
+#include <functional>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,20 +102,29 @@ void initBufferData(gldr::VertexArray& vao, gldr::indexVertexBuffer& indexBuffer
     indexBuffer.bufferData(indexdata);
 }
 
+void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, glm::vec3 position){
+    auto modelMatrix = glm::translate(glm::mat4(1.0f), position);
+    setModelMatrixLambda(modelMatrix);
+    gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
+}
+
 void display(gldr::Program& program, gldr::VertexArray& vao){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
 
     vao.bind();
     program.use();
-
-    auto modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, boxY, 0.0f));
     GLint mvpMat = program.getUniformLocation("mvpMat");
-    gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(cam.projectionMatrix() * cam.viewMatrix() * modelMatrix));
-
+    auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
+    auto lambda = [mvpMat, projectViewMatrix](glm::mat4 modelMatrix){ 
+        gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
+    };
     gl::EnableVertexAttribArray(0);
     gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
-    gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
+
+    drawBox(lambda, glm::vec3(0.0f, 0.5f, 0.0f));
+    drawBox(lambda, glm::vec3(2.0f, 0.5f, 2.0f));
+    drawBox(lambda, glm::vec3(10.0f, 0.5f, 10.0f));
 
     glfwSwapBuffers();
 }
@@ -192,7 +202,7 @@ int main(int argc, char** argv){
         gl::DebugMessageCallbackARB(DebugFunc, (void*)15);
     }
 
-    cam.pos = glm::vec3(10,0,0);
+    cam.pos = glm::vec3(10,1.72,0); // average person about that tall, right?
     gldr::VertexArray vao;
     gldr::Program program;
     gldr::indexVertexBuffer indexBuffer;
