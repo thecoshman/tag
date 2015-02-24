@@ -15,6 +15,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/swizzle.hpp>
 
+#include <glimg/glimg.h>
+
 // shut up :'(
 #define GL_TRUE                 1
 #define GL_FALSE                0
@@ -22,6 +24,7 @@
 #include "program.hpp"
 #include "vertexArray.hpp"
 #include "vertexBuffer.hpp"
+#include "texture.hpp"
 #include "util/camera.hpp"
 
 util::Camera cam;
@@ -39,20 +42,33 @@ void initOGLsettings(){
 void initShader(gldr::Program& program){
     std::string vertexShaderCode(
         "#version 330\n"
+        "\n"
         "layout(location = 0) in vec4 position;\n"
+        "layout(location = 1) in vec2 texture_coord;\n"
+        "\n"
+        "out vec2 texture_coord_from_vshader;\n"
+        "\n"
         "uniform mat4 mvpMat;\n"
+        "\n"
         "void main()\n"
         "{\n"
-        "   gl_Position = mvpMat * position;\n"
+        "    gl_Position = mvpMat * position;\n"
+        "    texture_coord_from_vshader = texture_coord;\n"
         "}\n"
     );
 
     std::string fragmentShaderCode(
         "#version 330\n"
+        "\n"
+        "in vec2 texture_coord_from_vshader;\n"
+        "\n"
         "out vec4 outputColor;\n"
+        "\n"
+        "uniform sampler2D texture_sampler;\n"
+        "\n"
         "void main()\n"
         "{\n"
-        "   outputColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+        "   outputColor = texture(texture_sampler, texture_coord_from_vshader);\n"
         "}\n"
     );
 
@@ -62,7 +78,18 @@ void initShader(gldr::Program& program){
     program.link();
 }
 
-void initBufferData(gldr::VertexArray& vao, gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer& vertexBuffer){
+void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer& vertexBuffer, gldr::dataVertexBuffer& textureCoordBuffer){
+    std::vector<GLuint> indexdata = {
+        0, 1, 2,
+        2, 3, 0,
+        4, 5, 6, 
+        6, 7, 4,
+        8, 9,10,
+        10,11, 8,
+        12,13,14,
+        14,15,12,
+    };
+
     std::vector<GLfloat> vertexPositions = {
         -0.5, -0.5, -0.5,
         -0.5, -0.5,  0.5,
@@ -84,22 +111,57 @@ void initBufferData(gldr::VertexArray& vao, gldr::indexVertexBuffer& indexBuffer
         -0.5,  0.5, -0.5,
          0.5,  0.5, -0.5,
     };
-
-    std::vector<GLuint> indexdata = {
-        0, 1, 2,
-        2, 3, 0,
-        4, 5, 6, 
-        6, 7, 4,
-        8, 9,10,
-        10,11, 8,
-        12,13,14,
-        14,15,12,
-    };
     
-    vao.bind();
+    std::vector<GLfloat> textureCoord = {
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0,
+        1.0, 0.0,
+
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+
+        1.0, 0.0,
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0,
+    };
+
+    indexBuffer.bufferData(indexdata);
 
     vertexBuffer.bufferData(vertexPositions);
-    indexBuffer.bufferData(indexdata);
+    gl::EnableVertexAttribArray(0);
+    gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
+    textureCoordBuffer.bufferData(textureCoord);
+    gl::EnableVertexAttribArray(1);
+    gl::VertexAttribPointer(1, 2, gl::FLOAT, GL_FALSE, 0, 0);
+}
+
+void initTexture(gldr::Texture2d& texture){
+    std::unique_ptr<glimg::ImageSet> imageSet(glimg::loaders::stb::LoadFromFile("resource/texture/reference_cube.png"));
+    auto image = imageSet->GetImage(0);
+    auto dim = image.GetDimensions();
+    auto format = image.GetFormat();
+    const void* dataPtr = image.GetImageData();
+    size_t  pixelSize = image.GetImageByteSize();
+    printf("image is %i by %i with %lu bytes\n", dim.width, dim.height, pixelSize);
+
+    texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Linear);
+    texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Linear);
+
+    texture.imageData(dim.width, dim.height,
+        gldr::textureOptions::Format::RGBA,
+        gldr::textureOptions::InternalFormat::RGB,
+        gldr::textureOptions::DataType::UnsignedByte,
+        image.GetImageData()
+    );
 }
 
 void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, glm::vec3 position){
@@ -108,19 +170,19 @@ void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, glm::vec3 posi
     gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
 }
 
-void display(gldr::Program& program, gldr::VertexArray& vao){
+void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& texture){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
 
     vao.bind();
     program.use();
+    texture.bind();
     GLint mvpMat = program.getUniformLocation("mvpMat");
     auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
     auto lambda = [mvpMat, projectViewMatrix](glm::mat4 modelMatrix){ 
         gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
     };
-    gl::EnableVertexAttribArray(0);
-    gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
+
 
     drawBox(lambda, glm::vec3(0.0f, 0.5f, 0.0f));
     drawBox(lambda, glm::vec3(2.0f, 0.5f, 2.0f));
@@ -202,21 +264,27 @@ int main(int argc, char** argv){
         gl::DebugMessageCallbackARB(DebugFunc, (void*)15);
     }
 
-    cam.pos = glm::vec3(10,1.72,0); // average person about that tall, right?
+    cam.pos = glm::vec3(10,1.72,-15); // average person about that tall, right?
+    cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
+
     gldr::VertexArray vao;
     gldr::Program program;
     gldr::indexVertexBuffer indexBuffer;
     gldr::dataVertexBuffer vertexBuffer;
+    gldr::dataVertexBuffer textureCoordBuffer;
+    gldr::Texture2d texture;
     initOGLsettings();
     initShader(program);
-    initBufferData(vao, indexBuffer, vertexBuffer);
+    vao.bind();
+    initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
+    initTexture(texture);
 
     glfwSetWindowSizeCallback(reshape);
 
     int points = 0;
     //Main loop
     while(true){
-        display(program, vao);
+        display(program, vao, texture);
 
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
             break;
