@@ -9,7 +9,7 @@ namespace util{
             dir(0.0,0.0,-1.0),
             up(0.0,1.0,0.0),
             aspectRatio(4.0f / 3.0f),
-            fov(45.0f), near(1.0f), far(999.0f){}
+            fov(45.0f), near(0.1f), far(999.0f){}
 
         glm::mat4 projectionMatrix() const{
             return glm::perspective(fov, aspectRatio, near, far); 

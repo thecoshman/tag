@@ -27,6 +27,29 @@
 #include "texture.hpp"
 #include "util/camera.hpp"
 
+struct AABB{
+    AABB(glm::vec3 midPoint, double width, double height, double depth): midPoint(midPoint), size(width, height, depth) {}
+    AABB(double x, double y, double z, double width, double height, double depth): midPoint(x, y, z), size(width, height, depth) {}
+
+    glm::vec3 midPoint, size;
+
+    glm::vec3 min() const{
+        // ok... this can't be the way to do this. Does glm not offer functions for this?
+        return glm::vec3(
+            midPoint.x - (size.x / 2),            
+            midPoint.y - (size.y / 2),
+            midPoint.z - (size.z / 2));
+    }
+
+    glm::vec3 max() const{
+        // ok... this can't be the way to do this. Does glm not offer functions for this?
+        return glm::vec3(
+            midPoint.x + (size.x / 2),            
+            midPoint.y + (size.y / 2),
+            midPoint.z + (size.z / 2));
+    }
+};
+
 util::Camera cam;
 float boxY = 0.0f;
 
@@ -164,13 +187,13 @@ void initTexture(gldr::Texture2d& texture){
     );
 }
 
-void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, glm::vec3 position){
+void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, const glm::vec3 position){
     auto modelMatrix = glm::translate(glm::mat4(1.0f), position);
     setModelMatrixLambda(modelMatrix);
     gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
 }
 
-void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& texture){
+void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& texture, const std::vector<glm::vec3>& boxPositions){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
 
@@ -184,9 +207,9 @@ void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& te
     };
 
 
-    drawBox(lambda, glm::vec3(0.0f, 0.5f, 0.0f));
-    drawBox(lambda, glm::vec3(2.0f, 0.5f, 2.0f));
-    drawBox(lambda, glm::vec3(10.0f, 0.5f, 10.0f));
+    for (auto &position : boxPositions){
+        drawBox(lambda, position);
+    }
 
     glfwSwapBuffers();
 }
@@ -226,11 +249,19 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
     printf("%s from %s,\t%s priority\nMessage: %s\n", errorType.c_str(), srcName.c_str(), typeSeverity.c_str(), message);
 }
 
-bool checkCollision(){
-    if(cam.pos.x < -0.5f){ return false; }
-    if(cam.pos.x >  0.5f){ return false; }
-    if(cam.pos.z < -0.5f){ return false; }
-    if(cam.pos.z >  0.5f){ return false; }
+bool checkCollision(const AABB& first, const AABB& second){
+    auto fMax = first.max();
+    auto sMin = second.min();
+    auto fMin = first.min();
+    auto sMax = second.max();
+
+    if(fMax.x < sMin.x){ return false; }
+    if(fMin.x > sMax.x){ return false; }
+    if(fMax.y < sMin.y){ return false; }
+    if(fMin.y > sMax.y){ return false; }
+    if(fMax.z < sMin.z){ return false; }
+    if(fMin.z > sMax.z){ return false; }
+
     return true;
 }
 
@@ -264,7 +295,7 @@ int main(int argc, char** argv){
         gl::DebugMessageCallbackARB(DebugFunc, (void*)15);
     }
 
-    cam.pos = glm::vec3(10,1.72,-15); // average person about that tall, right?
+    cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
     cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
 
     gldr::VertexArray vao;
@@ -281,10 +312,18 @@ int main(int argc, char** argv){
 
     glfwSetWindowSizeCallback(reshape);
 
+    std::vector<glm::vec3> boxPositions{
+        glm::vec3(0.0f, 0.5f, 0.0f),
+        glm::vec3(2.0f, 0.5f, 2.0f),
+        glm::vec3(10.0f, 0.5f, 10.0f),
+        glm::vec3(5.0f, 0.5f, 5.0f),
+        glm::vec3(5.0f, 1.5f, 5.0f)
+    };
+
     int points = 0;
     //Main loop
     while(true){
-        display(program, vao, texture);
+        display(program, vao, texture, boxPositions);
 
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
             break;
@@ -311,14 +350,19 @@ int main(int argc, char** argv){
             printf("You are at (%f, %f, %f)", cam.pos.x, cam.pos.y, cam.pos.z);
         }
 
-        if(checkCollision()){
-            points++;
-            printf("You got the box! You now have %i points\n", points);
-            if(points >= 3){
-                printf("    you winned!\n");
-                break;
+        for (auto &position : boxPositions){
+            AABB boxVolume = AABB(position, 1, 1, 1);
+            AABB playerVolume = AABB(cam.pos.x, (1.72/2), cam.pos.z, 0.9, 1.72, 0.9);
+            if(checkCollision(boxVolume, playerVolume)){
+                points++;
+                printf("You got the box! You now have %i points\n", points);
+                position.y += 2;
             }
-            cam.pos = glm::vec3(10,0,10);
+        }
+        
+        if(points >= 3){
+            printf("    you winned!\n");
+            break;
         }
     }
 
