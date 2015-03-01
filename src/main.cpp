@@ -75,14 +75,21 @@ struct Window{
     }
 
     glm::ivec2 mousePosition(){
-        int xpos, ypos;
-        glfwGetMousePos(&xpos, &ypos);
-        return glm::ivec2(xpos, ypos);
+        glfwGetMousePos(&mousePos.x, &mousePos.y);
+        return glm::ivec2(mousePos);
+    }
+
+    glm::ivec2 mouseDelta(){
+        int x,y;
+        glfwGetMousePos(&x, &y);
+        return glm::ivec2(x - mousePos.x, y - mousePos.y);   
     }
 
     void centreMouse(){
         // Reset mouse position for next frame
         glfwSetMousePos(size.x/2, size.y/2);
+        mousePos.x = size.x/2;
+        mousePos.y = size.y/2;
     }
 
     void windowResize(int width, int height){
@@ -91,12 +98,19 @@ struct Window{
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     }
 
+    bool shouldExit(){
+        return !run;
+    }
+
+    void exit(){
+        run = false;
+    }
 private:
     glm::ivec2 size;
     std::string windowTitle;
+    glm::ivec2 mousePos;
+    bool run = true;
 };
-
-util::Camera cam;
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -238,7 +252,7 @@ void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, const glm::vec
     gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
 }
 
-void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& texture, const std::vector<glm::vec3>& boxPositions){
+void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const gldr::Texture2d& texture, const std::vector<glm::vec3>& boxPositions){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
 
@@ -250,7 +264,6 @@ void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& te
     auto lambda = [mvpMat, projectViewMatrix](glm::mat4 modelMatrix){ 
         gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
     };
-
 
     for (auto &position : boxPositions){
         drawBox(lambda, position);
@@ -306,7 +319,6 @@ bool checkCollision(const AABB& first, const AABB& second){
     return true;
 }
 
-
 int main(int argc, char** argv){
     Window window;
     // glfw's C api makes it too awkard to move this stuff
@@ -317,7 +329,11 @@ int main(int argc, char** argv){
     glfwSetWindowSizeCallback([](int width, int height){
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     });
+    window.centreMouse();
+    auto mousePos = window.mousePosition();
 
+    glm::vec3 playerPosition = glm::vec3(10,1.7,-15);
+    util::Camera cam;
     cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
     cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
 
@@ -343,31 +359,53 @@ int main(int argc, char** argv){
 
     int points = 0;
     //Main loop
-    while(true){
-        display(program, vao, texture, boxPositions);
+    while(!window.shouldExit()){
+        auto mouseDelta = window.mouseDelta();
+        window.centreMouse();
+
+        cam.rotateYaw(mouseDelta.x / 10);
+        cam.rotatePitch(-(mouseDelta.y / 10));
+
 
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
-            break;
+            window.exit();
         }
+
+        glm::vec3 playerMove = glm::vec3(0.0f, 0.0f, 0.0f); // relative to current facing
+        bool actuallyMoving = false;
         if(glfwGetKey('W')){
-            cam.forward(0.1f);
+            playerMove.z += 1.0f;
+            actuallyMoving = true;
         }
         if(glfwGetKey('S')){
-            cam.forward(-0.1f);
+            playerMove.z -= 1.0f;
+            actuallyMoving = true;
         }
         if(glfwGetKey('A')){
-            cam.rotateYaw(-1.5f);
+            playerMove.x -= 1.0f;
+            actuallyMoving = true;
         }
         if(glfwGetKey('D')){
-            cam.rotateYaw(1.5f);
+            playerMove.x += 1.0f;
+            actuallyMoving = true;
         }
-        if(glfwGetKey('P')){
-            printf("You are at (%f, %f, %f)", cam.pos.x, cam.pos.y, cam.pos.z);
+        if(actuallyMoving){
+            playerMove = glm::normalize(playerMove); // avoid them moving faster when going diaganol
+            playerMove *= 0.1f;
+                
+            glm::vec3 playerForwards = glm::normalize(glm::vec3(cam.dir.x, 0.0, cam.dir.z));
+            glm::vec3 playerRight = cam.rightVector();
+            playerRight.y = 0.0f;
+            playerRight = glm::normalize(playerRight);
+    
+            playerPosition += (playerForwards * playerMove.z);
+            playerPosition += playerRight * playerMove.x;
+            cam.pos = playerPosition;
         }
 
         for (auto &position : boxPositions){
             AABB boxVolume = AABB(position, 1, 1, 1);
-            AABB playerVolume = AABB(cam.pos.x, (1.72/2), cam.pos.z, 0.9, 1.72, 0.9);
+            AABB playerVolume = AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
             if(checkCollision(boxVolume, playerVolume)){
                 points++;
                 printf("You got the box! You now have %i points\n", points);
@@ -377,8 +415,11 @@ int main(int argc, char** argv){
         
         if(points >= 3){
             printf("    you winned!\n");
-            break;
+            window.exit();
         }
+
+
+        display(cam, program, vao, texture, boxPositions);
     }
 
     glfwTerminate();
