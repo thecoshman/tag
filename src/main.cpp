@@ -1,5 +1,6 @@
 #include <string>
 #include <exception>
+#include <stdexcept>
 #include <functional>
 #include <stdexcept>
 #include <stdio.h>
@@ -8,7 +9,6 @@
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
 #include <GL/glfw.h>
-
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -50,8 +50,53 @@ struct AABB{
     }
 };
 
+struct Window{
+    Window() : size(800,600), windowTitle("TAG V3"){
+        if(!glfwInit()){
+            throw std::runtime_error("glfwInit failed");
+        }
+        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
+        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
+        glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef DEBUG
+        glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
+#endif   
+        auto glfwWindow = glfwOpenWindow(size.x, size.y, 8, 8, 8, 8, 24, 8, GLFW_WINDOW);
+        if(!glfwWindow){
+            glfwTerminate();
+            throw std::runtime_error("glfwOpenWindow failed");
+        }
+        if(!glload::LoadFunctions()){
+            glfwTerminate();
+            throw std::runtime_error("glload::LoadFunctions failed");
+        }
+
+        glfwSetWindowTitle(windowTitle.c_str());
+    }
+
+    glm::ivec2 mousePosition(){
+        int xpos, ypos;
+        glfwGetMousePos(&xpos, &ypos);
+        return glm::ivec2(xpos, ypos);
+    }
+
+    void centreMouse(){
+        // Reset mouse position for next frame
+        glfwSetMousePos(size.x/2, size.y/2);
+    }
+
+    void windowResize(int width, int height){
+        size.x = width;
+        size.y = height;
+        gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
+    }
+
+private:
+    glm::ivec2 size;
+    std::string windowTitle;
+};
+
 util::Camera cam;
-float boxY = 0.0f;
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -214,10 +259,6 @@ void display(gldr::Program& program, gldr::VertexArray& vao, gldr::Texture2d& te
     glfwSwapBuffers();
 }
 
-void reshape (int w, int h){
-    gl::Viewport(0, 0, (GLsizei) w, (GLsizei) h);
-}
-
 void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam){
     std::string srcName;
     switch(source){
@@ -267,33 +308,15 @@ bool checkCollision(const AABB& first, const AABB& second){
 
 
 int main(int argc, char** argv){
-    if(!glfwInit()){
-        return -1;
-    }
-
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
-    glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef DEBUG
-    glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
-#endif
-
-    if(!glfwOpenWindow(800, 600, 8, 8, 8, 8, 24, 8, GLFW_WINDOW)){
-        glfwTerminate();
-        return -1;
-    }
-
-    if(!glload::LoadFunctions()){
-        glfwTerminate();
-        return -1;
-    }
-
-    glfwSetWindowTitle("TAG V2");
-
+    Window window;
+    // glfw's C api makes it too awkard to move this stuff
     if(gl::exts::var_ARB_debug_output){
         gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS_ARB);
         gl::DebugMessageCallbackARB(DebugFunc, (void*)15);
     }
+    glfwSetWindowSizeCallback([](int width, int height){
+        gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
+    });
 
     cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
     cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
@@ -309,8 +332,6 @@ int main(int argc, char** argv){
     vao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
     initTexture(texture);
-
-    glfwSetWindowSizeCallback(reshape);
 
     std::vector<glm::vec3> boxPositions{
         glm::vec3(0.0f, 0.5f, 0.0f),
@@ -339,12 +360,6 @@ int main(int argc, char** argv){
         }
         if(glfwGetKey('D')){
             cam.rotateYaw(1.5f);
-        }
-        if(glfwGetKey('Q')){
-            boxY += 0.1f;
-        }
-        if(glfwGetKey('E')){
-            boxY -= 0.1f;
         }
         if(glfwGetKey('P')){
             printf("You are at (%f, %f, %f)", cam.pos.x, cam.pos.y, cam.pos.z);
