@@ -28,17 +28,9 @@
 #include "vertexArray.hpp"
 #include "vertexBuffer.hpp"
 #include "texture.hpp"
+
 #include "util/camera.hpp"
-
-struct AABB{
-    AABB(glm::vec3 midPoint, double width, double height, double depth): AABB(midPoint.x, midPoint.y, midPoint.z, width, height, depth) {}
-    AABB(double x, double y, double z, double width, double height, double depth):
-        min(x - (width / 2), y - (height / 2), z - (depth / 2)),
-        max(x + (width / 2), y + (height / 2), z + (depth / 2)) {}
-
-    glm::vec3 min;
-    glm::vec3 max;
-};
+#include "util/collisionCheckers.hpp"
 
 struct Cube{
     glm::mat4 getModelMatrix() const{
@@ -47,12 +39,6 @@ struct Cube{
 
     glm::vec3 position;
     std::string textureName;
-};
-
-struct Ray
-{
-    glm::vec3 source, direction;
-    float length;
 };
 
 struct Window{
@@ -265,14 +251,6 @@ gldr::Texture2d loadTexture(const std::string& file){
     return texture;
 }
 
-// Cube pickCube(const std::std::vector<Cube>& cubes, const Ray& ray){
-//     for(auto& cube: cubes){
-//         if(checkCollision(cube, ray)){
-
-//         }
-//     }
-// }
-
 void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures, const std::vector<Cube>& cubes){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
@@ -322,34 +300,6 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
     printf("%s from %s,\t%s priority\nMessage: %s\n", errorType.c_str(), srcName.c_str(), typeSeverity.c_str(), message);
 }
 
-bool checkCollision(const AABB& first, const AABB& second){
-    if(first.max.x < second.min.x){ return false; }
-    if(first.max.y < second.min.y){ return false; }
-    if(first.max.z < second.min.z){ return false; }
-
-    if(first.min.x > second.max.x){ return false; }
-    if(first.min.y > second.max.y){ return false; }
-    if(first.min.z > second.max.z){ return false; }
-
-    return true;
-}
-
-// bool checkCollision(const AABB& first, const Ray& second){
-//     auto fMax = first.max();
-//     auto sMin = second.min();
-//     auto fMin = first.min();
-//     auto sMax = second.max();
-
-//     if(fMax.x < sMin.x){ return false; }
-//     if(fMin.x > sMax.x){ return false; }
-//     if(fMax.y < sMin.y){ return false; }
-//     if(fMin.y > sMax.y){ return false; }
-//     if(fMax.z < sMin.z){ return false; }
-//     if(fMin.z > sMax.z){ return false; }
-
-//     return true;
-// }
-
 int main(int argc, char** argv){
     Window window;
     // glfw's C api makes it too awkard to move this stuff
@@ -395,7 +345,7 @@ int main(int argc, char** argv){
     };
 
     bool showMarker = false;
-    Cube marker{ glm::vec3(0.0, 0.0, 0.0), "white_cube" };
+    Cube marker{ glm::vec3(0.0, 1.5, 0.0), "white_cube" };
 
     int points = 0;
     //Main loop
@@ -444,9 +394,9 @@ int main(int argc, char** argv){
         }
 
         for (auto &cube : cubes){
-            AABB boxVolume = AABB(cube.position, 1, 1, 1);
-            AABB playerVolume = AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
-            if(checkCollision(boxVolume, playerVolume)){
+            auto boxVolume = util::AABB(cube.position, 1, 1, 1);
+            auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
+            if(util::checkCollision(boxVolume, playerVolume)){
                 points++;
                 printf("You got the box at (%f, %f, %f)! You now have %i points\n", playerPosition.x, playerPosition.y, playerPosition.z, points);
                 cube.position.y += 2;
@@ -466,16 +416,6 @@ int main(int argc, char** argv){
             printf("right\n");
         }
         std::vector<Cube> toDraw(cubes);
-
-        if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_3)){
-            showMarker = true;
-            // glm::vec3 targetPossition = pickItem(cubes, Ray(playerPosition, cam.dir, 10.0f));
-
-            toDraw.push_back(marker);
-        } else {
-            showMarker = false;
-        }
-        
 
         display(cam, program, vao, textures, toDraw);
     }
