@@ -5,6 +5,9 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
+#include <map>
+#include <set>
+#include <utility>
 
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
@@ -28,26 +31,28 @@
 #include "util/camera.hpp"
 
 struct AABB{
-    AABB(glm::vec3 midPoint, double width, double height, double depth): midPoint(midPoint), size(width, height, depth) {}
-    AABB(double x, double y, double z, double width, double height, double depth): midPoint(x, y, z), size(width, height, depth) {}
+    AABB(glm::vec3 midPoint, double width, double height, double depth): AABB(midPoint.x, midPoint.y, midPoint.z, width, height, depth) {}
+    AABB(double x, double y, double z, double width, double height, double depth):
+        min(x - (width / 2), y - (height / 2), z - (depth / 2)),
+        max(x + (width / 2), y + (height / 2), z + (depth / 2)) {}
 
-    glm::vec3 midPoint, size;
+    glm::vec3 min;
+    glm::vec3 max;
+};
 
-    glm::vec3 min() const{
-        // ok... this can't be the way to do this. Does glm not offer functions for this?
-        return glm::vec3(
-            midPoint.x - (size.x / 2),            
-            midPoint.y - (size.y / 2),
-            midPoint.z - (size.z / 2));
+struct Cube{
+    glm::mat4 getModelMatrix() const{
+        return glm::translate(glm::mat4(1.0f), position);
     }
 
-    glm::vec3 max() const{
-        // ok... this can't be the way to do this. Does glm not offer functions for this?
-        return glm::vec3(
-            midPoint.x + (size.x / 2),            
-            midPoint.y + (size.y / 2),
-            midPoint.z + (size.z / 2));
-    }
+    glm::vec3 position;
+    std::string textureName;
+};
+
+struct Ray
+{
+    glm::vec3 source, direction;
+    float length;
 };
 
 struct Window{
@@ -111,6 +116,19 @@ private:
     glm::ivec2 mousePos;
     bool run = true;
 };
+
+/*struct textureStore{
+    void store(const std::string& name, gldr::Texture2d texture){
+
+    textures.insert(std::make_pair(name, texture));
+    }
+    void bind(const std::string& name){
+        textures.find("reference_cube")->second.bind();
+    }
+
+private:
+    std::map<std::string, gldr::Texture2d> textures;
+};*/
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -226,15 +244,15 @@ void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer
     gl::VertexAttribPointer(1, 2, gl::FLOAT, GL_FALSE, 0, 0);
 }
 
-void initTexture(gldr::Texture2d& texture){
-    std::unique_ptr<glimg::ImageSet> imageSet(glimg::loaders::stb::LoadFromFile("resource/texture/reference_cube.png"));
+gldr::Texture2d loadTexture(const std::string& file){
+    std::unique_ptr<glimg::ImageSet> imageSet(glimg::loaders::stb::LoadFromFile(file));
     auto image = imageSet->GetImage(0);
     auto dim = image.GetDimensions();
     auto format = image.GetFormat();
     const void* dataPtr = image.GetImageData();
     size_t  pixelSize = image.GetImageByteSize();
-    printf("image is %i by %i with %lu bytes\n", dim.width, dim.height, pixelSize);
 
+    gldr::Texture2d texture;
     texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Linear);
     texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Linear);
 
@@ -244,29 +262,30 @@ void initTexture(gldr::Texture2d& texture){
         gldr::textureOptions::DataType::UnsignedByte,
         image.GetImageData()
     );
+    return texture;
 }
 
-void drawBox(std::function<void(glm::mat4)> setModelMatrixLambda, const glm::vec3 position){
-    auto modelMatrix = glm::translate(glm::mat4(1.0f), position);
-    setModelMatrixLambda(modelMatrix);
-    gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
-}
+// Cube pickCube(const std::std::vector<Cube>& cubes, const Ray& ray){
+//     for(auto& cube: cubes){
+//         if(checkCollision(cube, ray)){
 
-void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const gldr::Texture2d& texture, const std::vector<glm::vec3>& boxPositions){
+//         }
+//     }
+// }
+
+void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures, const std::vector<Cube>& cubes){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
 
     vao.bind();
     program.use();
-    texture.bind();
     GLint mvpMat = program.getUniformLocation("mvpMat");
     auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
-    auto lambda = [mvpMat, projectViewMatrix](glm::mat4 modelMatrix){ 
-        gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
-    };
 
-    for (auto &position : boxPositions){
-        drawBox(lambda, position);
+    for (auto &cube : cubes){
+        gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * cube.getModelMatrix()));
+        textures.find(cube.textureName)->second.bind();
+        gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
     }
 
     glfwSwapBuffers();
@@ -304,20 +323,32 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
 }
 
 bool checkCollision(const AABB& first, const AABB& second){
-    auto fMax = first.max();
-    auto sMin = second.min();
-    auto fMin = first.min();
-    auto sMax = second.max();
+    if(first.max.x < second.min.x){ return false; }
+    if(first.max.y < second.min.y){ return false; }
+    if(first.max.z < second.min.z){ return false; }
 
-    if(fMax.x < sMin.x){ return false; }
-    if(fMin.x > sMax.x){ return false; }
-    if(fMax.y < sMin.y){ return false; }
-    if(fMin.y > sMax.y){ return false; }
-    if(fMax.z < sMin.z){ return false; }
-    if(fMin.z > sMax.z){ return false; }
+    if(first.min.x > second.max.x){ return false; }
+    if(first.min.y > second.max.y){ return false; }
+    if(first.min.z > second.max.z){ return false; }
 
     return true;
 }
+
+// bool checkCollision(const AABB& first, const Ray& second){
+//     auto fMax = first.max();
+//     auto sMin = second.min();
+//     auto fMin = first.min();
+//     auto sMax = second.max();
+
+//     if(fMax.x < sMin.x){ return false; }
+//     if(fMin.x > sMax.x){ return false; }
+//     if(fMax.y < sMin.y){ return false; }
+//     if(fMin.y > sMax.y){ return false; }
+//     if(fMax.z < sMin.z){ return false; }
+//     if(fMin.z > sMax.z){ return false; }
+
+//     return true;
+// }
 
 int main(int argc, char** argv){
     Window window;
@@ -337,25 +368,34 @@ int main(int argc, char** argv){
     cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
     cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
 
+    
+    std::map<std::string, gldr::Texture2d> textures;
+
+    textures.insert(std::make_pair("red_cube", loadTexture("resource/texture/reference_cube.png")));
+    textures.insert(std::make_pair("green_cube", loadTexture("resource/texture/green_cube.png")));
+    textures.insert(std::make_pair("white_cube", loadTexture("resource/texture/white_cube.png")));
+
     gldr::VertexArray vao;
     gldr::Program program;
     gldr::indexVertexBuffer indexBuffer;
     gldr::dataVertexBuffer vertexBuffer;
     gldr::dataVertexBuffer textureCoordBuffer;
-    gldr::Texture2d texture;
     initOGLsettings();
     initShader(program);
     vao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
-    initTexture(texture);
 
-    std::vector<glm::vec3> boxPositions{
-        glm::vec3(0.0f, 0.5f, 0.0f),
-        glm::vec3(2.0f, 0.5f, 2.0f),
-        glm::vec3(10.0f, 0.5f, 10.0f),
-        glm::vec3(5.0f, 0.5f, 5.0f),
-        glm::vec3(5.0f, 1.5f, 5.0f)
+    std::vector<Cube> cubes{
+        Cube{ glm::vec3(0.0f, 0.5f, 0.0f), "red_cube"},
+        Cube{ glm::vec3(2.0f, 0.5f, 2.0f), "red_cube"}, 
+        Cube{ glm::vec3(10.0f, 0.5f, 10.0f), "red_cube"}, 
+        Cube{ glm::vec3(5.0f, 0.5f, 5.0f), "red_cube"}, 
+        Cube{ glm::vec3(5.0f, 1.5f, 5.0f), "red_cube"}, 
+        Cube{ glm::vec3(5.0f, 0.5f, -5.0f), "green_cube"}
     };
+
+    bool showMarker = false;
+    Cube marker{ glm::vec3(0.0, 0.0, 0.0), "white_cube" };
 
     int points = 0;
     //Main loop
@@ -403,13 +443,13 @@ int main(int argc, char** argv){
             cam.pos = playerPosition;
         }
 
-        for (auto &position : boxPositions){
-            AABB boxVolume = AABB(position, 1, 1, 1);
+        for (auto &cube : cubes){
+            AABB boxVolume = AABB(cube.position, 1, 1, 1);
             AABB playerVolume = AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
             if(checkCollision(boxVolume, playerVolume)){
                 points++;
-                printf("You got the box! You now have %i points\n", points);
-                position.y += 2;
+                printf("You got the box at (%f, %f, %f)! You now have %i points\n", playerPosition.x, playerPosition.y, playerPosition.z, points);
+                cube.position.y += 2;
             }
         }
         
@@ -419,7 +459,25 @@ int main(int argc, char** argv){
         }
 
 
-        display(cam, program, vao, texture, boxPositions);
+        if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
+            printf("left\n");
+        }
+        if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
+            printf("right\n");
+        }
+        std::vector<Cube> toDraw(cubes);
+
+        if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_3)){
+            showMarker = true;
+            // glm::vec3 targetPossition = pickItem(cubes, Ray(playerPosition, cam.dir, 10.0f));
+
+            toDraw.push_back(marker);
+        } else {
+            showMarker = false;
+        }
+        
+
+        display(cam, program, vao, textures, toDraw);
     }
 
     glfwTerminate();
