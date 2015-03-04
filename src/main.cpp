@@ -1,14 +1,4 @@
-#include <string>
-#include <exception>
-#include <stdexcept>
-#include <functional>
-#include <stdexcept>
-#include <stdio.h>
-#include <stdlib.h>
 #include <map>
-#include <set>
-#include <utility>
-#include <cmath>
 
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
@@ -419,7 +409,7 @@ int main(int argc, char** argv){
             auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
             if(util::checkCollision(boxVolume, playerVolume)){
                 worldGrid.erase(coord);
-                printf("You got the box at (%i, %i, %i)! You now have %li cubes left to get\n", coord.x, coord.y, coord.z, worldGrid.size());
+                std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
                 break;
             }
         }
@@ -430,10 +420,10 @@ int main(int argc, char** argv){
         }
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
-            printf("left\n");
+            std::cout << "left" << std::endl;
         }
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
-            printf("right\n");
+            std::cout << "right" << std::endl;
         }
 
         display(cam, cubeShader, cubeVao, textures, worldGrid);
