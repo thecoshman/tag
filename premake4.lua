@@ -28,7 +28,7 @@ project "TAG"
         targetsuffix "D"
         defines "_DEBUG"
         flags {"Symbols"}
-        buildoptions {"-std=c++11"}
+        buildoptions {"-std=c++11 -Wall"}
 
     configuration "Release"
         defines "NDEBUG"
