@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <cmath>
 
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
@@ -32,12 +33,31 @@
 #include "util/camera.hpp"
 #include "util/collisionCheckers.hpp"
 
-struct Cube{
-    glm::mat4 getModelMatrix() const{
-        return glm::translate(glm::mat4(1.0f), position);
-    }
+struct CubeCoord{
+    int x, y, z;
 
-    glm::vec3 position;
+    static CubeCoord fromGlmVec3(const glm::vec3& realPosition){
+        int x = static_cast<int>(std::floor(realPosition.x));
+        int y = static_cast<int>(std::ceil(realPosition.y));
+        int z = static_cast<int>(std::floor(realPosition.z));
+        return CubeCoord{x, y, z};
+    }
+};
+
+bool operator<(const CubeCoord& lhs, const CubeCoord& rhs){
+    /*if(lhs.x < rhs.x){ return true; }
+    if(lhs.y < rhs.y){ return true; }
+    if(lhs.z < rhs.z){ return true; }
+    return false;*/
+    return lhs.x < rhs.x || lhs.y < rhs.y || lhs.z < rhs.z;
+}
+
+struct Cube{
+    static glm::mat4 getModelMatrix(CubeCoord coord){
+        return glm::translate(glm::mat4(1.0f), glm::vec3(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5));
+    }
+    
+    Cube(std::string textureName): textureName(textureName){};
     std::string textureName;
 };
 
@@ -49,9 +69,9 @@ struct Window{
         glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
         glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
         glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef DEBUG
+        #ifdef DEBUG
         glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
-#endif   
+        #endif   
         auto glfwWindow = glfwOpenWindow(size.x, size.y, 8, 8, 8, 8, 24, 8, GLFW_WINDOW);
         if(!glfwWindow){
             glfwTerminate();
@@ -63,6 +83,10 @@ struct Window{
         }
 
         glfwSetWindowTitle(windowTitle.c_str());
+    }
+
+    ~Window(){
+        glfwTerminate();
     }
 
     glm::ivec2 mousePosition(){
@@ -77,7 +101,6 @@ struct Window{
     }
 
     void centreMouse(){
-        // Reset mouse position for next frame
         glfwSetMousePos(size.x/2, size.y/2);
         mousePos.x = size.x/2;
         mousePos.y = size.y/2;
@@ -96,25 +119,14 @@ struct Window{
     void exit(){
         run = false;
     }
-private:
+
+    private:
+
     glm::ivec2 size;
     std::string windowTitle;
     glm::ivec2 mousePos;
     bool run = true;
 };
-
-/*struct textureStore{
-    void store(const std::string& name, gldr::Texture2d texture){
-
-    textures.insert(std::make_pair(name, texture));
-    }
-    void bind(const std::string& name){
-        textures.find("reference_cube")->second.bind();
-    }
-
-private:
-    std::map<std::string, gldr::Texture2d> textures;
-};*/
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -234,9 +246,9 @@ gldr::Texture2d loadTexture(const std::string& file){
     std::unique_ptr<glimg::ImageSet> imageSet(glimg::loaders::stb::LoadFromFile(file));
     auto image = imageSet->GetImage(0);
     auto dim = image.GetDimensions();
-    auto format = image.GetFormat();
-    const void* dataPtr = image.GetImageData();
-    size_t  pixelSize = image.GetImageByteSize();
+    // auto format = image.GetFormat();
+    // const void* dataPtr = image.GetImageData();
+    // size_t  pixelSize = image.GetImageByteSize();
 
     gldr::Texture2d texture;
     texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Linear);
@@ -251,7 +263,7 @@ gldr::Texture2d loadTexture(const std::string& file){
     return texture;
 }
 
-void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures, const std::vector<Cube>& cubes){
+void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures, const std::map<CubeCoord, Cube>& worldGrid){
     gl::Clear(gl::COLOR_BUFFER_BIT);
     gl::Clear(gl::DEPTH_BUFFER_BIT);
 
@@ -260,8 +272,11 @@ void display(const util::Camera& cam, const gldr::Program& program, const gldr::
     GLint mvpMat = program.getUniformLocation("mvpMat");
     auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
 
-    for (auto &cube : cubes){
-        gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * cube.getModelMatrix()));
+    for (auto &pair : worldGrid){
+        CubeCoord coord = pair.first;
+        Cube cube = pair.second;
+        auto modelMatrix = Cube::getModelMatrix(coord);
+        gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
         textures.find(cube.textureName)->second.bind();
         gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
     }
@@ -311,7 +326,7 @@ int main(int argc, char** argv){
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     });
     window.centreMouse();
-    auto mousePos = window.mousePosition();
+    // auto mousePos = window.mousePosition();
 
     glm::vec3 playerPosition = glm::vec3(10,1.7,-15);
     util::Camera cam;
@@ -325,61 +340,60 @@ int main(int argc, char** argv){
     textures.insert(std::make_pair("green_cube", loadTexture("resource/texture/green_cube.png")));
     textures.insert(std::make_pair("white_cube", loadTexture("resource/texture/white_cube.png")));
 
-    gldr::VertexArray vao;
-    gldr::Program program;
+    gldr::VertexArray cubeVao;
+    gldr::Program cubeShader;
     gldr::indexVertexBuffer indexBuffer;
     gldr::dataVertexBuffer vertexBuffer;
     gldr::dataVertexBuffer textureCoordBuffer;
     initOGLsettings();
-    initShader(program);
-    vao.bind();
+    initShader(cubeShader);
+    cubeVao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
 
-    std::vector<Cube> cubes{
-        Cube{ glm::vec3(0.0f, 0.5f, 0.0f), "red_cube"},
-        Cube{ glm::vec3(2.0f, 0.5f, 2.0f), "red_cube"}, 
-        Cube{ glm::vec3(10.0f, 0.5f, 10.0f), "red_cube"}, 
-        Cube{ glm::vec3(5.0f, 0.5f, 5.0f), "red_cube"}, 
-        Cube{ glm::vec3(5.0f, 1.5f, 5.0f), "red_cube"}, 
-        Cube{ glm::vec3(5.0f, 0.5f, -5.0f), "green_cube"}
-    };
+    std::map<CubeCoord, Cube> worldGrid;
+    {
+        worldGrid.insert(std::make_pair(CubeCoord{5,  1, -5}, Cube("green_cube")));
+        worldGrid.insert(std::make_pair(CubeCoord{3,  1, -5}, Cube("white_cube")));
+        worldGrid.insert(std::make_pair(CubeCoord{0,  1,  0}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{2,  1,  2}, Cube("red_cube"  ))); 
+        worldGrid.insert(std::make_pair(CubeCoord{10, 1, 10}, Cube("red_cube"  ))); 
+        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  ))); 
+        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  ))); 
+    }
 
-    bool showMarker = false;
-    Cube marker{ glm::vec3(0.0, 1.5, 0.0), "white_cube" };
-
-    int points = 0;
     //Main loop
     while(!window.shouldExit()){
-        auto mouseDelta = window.mouseDelta();
-        window.centreMouse();
-
-        cam.rotateYaw(mouseDelta.x / 10);
-        cam.rotatePitch(-(mouseDelta.y / 10));
-
+        {
+            auto mouseDelta = window.mouseDelta();
+            window.centreMouse();
+            cam.rotateYaw(mouseDelta.x / 10);
+            cam.rotatePitch(-(mouseDelta.y / 10));
+        }
 
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
             window.exit();
         }
 
-        glm::vec3 playerMove = glm::vec3(0.0f, 0.0f, 0.0f); // relative to current facing
-        bool actuallyMoving = false;
-        if(glfwGetKey('W')){
-            playerMove.z += 1.0f;
-            actuallyMoving = true;
-        }
-        if(glfwGetKey('S')){
-            playerMove.z -= 1.0f;
-            actuallyMoving = true;
-        }
-        if(glfwGetKey('A')){
-            playerMove.x -= 1.0f;
-            actuallyMoving = true;
-        }
-        if(glfwGetKey('D')){
-            playerMove.x += 1.0f;
-            actuallyMoving = true;
-        }
-        if(actuallyMoving){
+        {
+            glm::vec3 playerMove = glm::vec3(0.0f, 0.0f, 0.0f); // relative to current facing
+            bool actuallyMoving = false;
+            if(glfwGetKey('W')){
+                playerMove.z += 1.0f;
+                actuallyMoving = true;
+            }
+            if(glfwGetKey('S')){
+                playerMove.z -= 1.0f;
+                actuallyMoving = true;
+            }
+            if(glfwGetKey('A')){
+                playerMove.x -= 1.0f;
+                actuallyMoving = true;
+            }
+            if(glfwGetKey('D')){
+                playerMove.x += 1.0f;
+                actuallyMoving = true;
+            }
+            if(actuallyMoving){
             playerMove = glm::normalize(playerMove); // avoid them moving faster when going diaganol
             playerMove *= 0.1f;
                 
@@ -391,23 +405,29 @@ int main(int argc, char** argv){
             playerPosition += (playerForwards * playerMove.z);
             playerPosition += playerRight * playerMove.x;
             cam.pos = playerPosition;
+            }
         }
 
-        for (auto &cube : cubes){
-            auto boxVolume = util::AABB(cube.position, 1, 1, 1);
+        if(glfwGetKey('P')){
+            CubeCoord coord = CubeCoord::fromGlmVec3(playerPosition);
+            printf("(%f, %f, %f) => (%i, %i, %i)\n", playerPosition.x, playerPosition.y, playerPosition.z, coord.x, coord.y, coord.z);
+        }
+
+        for (auto &cube : worldGrid){
+            auto& coord = cube.first;
+            auto boxVolume = util::AABB(coord.x, coord.y, coord.z, 1, 1, 1);
             auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
             if(util::checkCollision(boxVolume, playerVolume)){
-                points++;
-                printf("You got the box at (%f, %f, %f)! You now have %i points\n", playerPosition.x, playerPosition.y, playerPosition.z, points);
-                cube.position.y += 2;
+                worldGrid.erase(coord);
+                printf("You got the box at (%i, %i, %i)! You now have %li cubes left to get\n", coord.x, coord.y, coord.z, worldGrid.size());
+                break;
             }
         }
         
-        if(points >= 3){
+        if(worldGrid.size() == 0){
             printf("    you winned!\n");
             window.exit();
         }
-
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
             printf("left\n");
@@ -415,11 +435,8 @@ int main(int argc, char** argv){
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
             printf("right\n");
         }
-        std::vector<Cube> toDraw(cubes);
 
-        display(cam, program, vao, textures, toDraw);
+        display(cam, cubeShader, cubeVao, textures, worldGrid);
     }
-
-    glfwTerminate();
     return 0;
 }
