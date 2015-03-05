@@ -318,7 +318,7 @@ int main(int argc, char** argv){
     window.centreMouse();
     // auto mousePos = window.mousePosition();
 
-    glm::vec3 playerPosition = glm::vec3(10,1.7,-15);
+    glm::vec3 playerPosition = glm::vec3(10,0,-15);
     util::Camera cam;
     cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
     cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
@@ -342,13 +342,13 @@ int main(int argc, char** argv){
 
     std::map<CubeCoord, Cube> worldGrid;
     {
+        worldGrid.insert(std::make_pair(CubeCoord{0,  1,  0}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{2,  1,  2}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{10, 1, 10}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  )));
         worldGrid.insert(std::make_pair(CubeCoord{5,  1, -5}, Cube("green_cube")));
         worldGrid.insert(std::make_pair(CubeCoord{3,  1, -5}, Cube("white_cube")));
-        worldGrid.insert(std::make_pair(CubeCoord{0,  1,  0}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{2,  1,  2}, Cube("red_cube"  ))); 
-        worldGrid.insert(std::make_pair(CubeCoord{10, 1, 10}, Cube("red_cube"  ))); 
-        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  ))); 
-        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  ))); 
     }
 
     //Main loop
@@ -395,6 +395,7 @@ int main(int argc, char** argv){
             playerPosition += (playerForwards * playerMove.z);
             playerPosition += playerRight * playerMove.x;
             cam.pos = playerPosition;
+            cam.pos.y += 1.7; // players eyes are not in their feet... I'll do this better some other time
             }
         }
 
@@ -403,17 +404,18 @@ int main(int argc, char** argv){
             printf("(%f, %f, %f) => (%i, %i, %i)\n", playerPosition.x, playerPosition.y, playerPosition.z, coord.x, coord.y, coord.z);
         }
 
-        for (auto &cube : worldGrid){
+        auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
+        auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&playerVolume](const std::pair<const CubeCoord, Cube>& cube){
             auto& coord = cube.first;
             auto boxVolume = util::AABB(coord.x, coord.y, coord.z, 1, 1, 1);
-            auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
-            if(util::checkCollision(boxVolume, playerVolume)){
-                worldGrid.erase(coord);
-                std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
-                break;
-            }
+            return util::checkCollision(boxVolume, playerVolume); });
+
+        if(hitCube != worldGrid.end()){
+            auto& coord = hitCube->first;
+            worldGrid.erase(hitCube);
+            std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
         }
-        
+
         if(worldGrid.size() == 0){
             printf("    you winned!\n");
             window.exit();
