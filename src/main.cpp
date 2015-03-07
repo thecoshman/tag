@@ -406,17 +406,23 @@ int main(int argc, char** argv){
             printf("(%f, %f, %f) => (%i, %i, %i)\n", playerPosition.x, playerPosition.y, playerPosition.z, coord.x, coord.y, coord.z);
         }
 
-        // auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
-        // auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&playerVolume](const std::pair<const CubeCoord, Cube>& cube){
-        //     auto& coord = cube.first;
-        //     auto boxVolume = util::AABB(coord.x, coord.y, coord.z, 1, 1, 1);
-        //     return util::checkCollision(boxVolume, playerVolume); });
+        auto playerBox = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
+        auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&playerBox](const std::pair<const CubeCoord, Cube>& cube){
+            auto& coord = cube.first;
+            auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
+            if(util::checkCollision(box, playerBox)){
+                std::cout << "player = {{" << playerBox.min.x << ", " << playerBox.min.y << ", " << playerBox.min.z << "},{" << playerBox.max.x << ", " << playerBox.max.y << ", " << playerBox.max.z << "}}" << std::endl;
+                std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
+                return true;
+            } else {
+                return false;
+            } });
 
-        // if(hitCube != worldGrid.end()){
-        //     auto& coord = hitCube->first;
-        //     worldGrid.erase(hitCube);
-        //     std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
-        // }
+        if(hitCube != worldGrid.end()){
+            auto& coord = hitCube->first;
+            worldGrid.erase(hitCube);
+            std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
+        }
 
         if(worldGrid.size() == 0){
             printf("    you winned!\n");
