@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "volumes.hpp"
 
 namespace util{
@@ -26,4 +28,71 @@ bool checkCollision(const AABB& box, const glm::vec3& point){
 
     return true;
 }
+
+namespace{
+enum ClipPlane : int{
+    x, y, z
+};
+
+template<typename V>
+std::pair<bool, std::pair<typename V::value_type, typename V::value_type>> clip(ClipPlane plane, const RAY<V>& ray, const AxisAlignedBoundingBox<V>& box, typename V::value_type nearest, typename V::value_type furthest){
+    using T = typename V::value_type;
+
+    T near, far;
+
+    near  = (box.min[plane] - ray.source[plane]) / ray.direction[plane];
+    far   = (box.max[plane] - ray.source[plane]) / ray.direction[plane];
+    
+    if(far < near){
+        std::swap(near, far);
+    }
+
+    if(far < nearest || near > furthest){
+        return std::make_pair(false, std::make_pair(-1,-1));
+    }
+
+    near = std::max(near, nearest);
+    far  = std::min(far,  furthest);
+
+    if(near > far){
+        return std::make_pair(false, std::make_pair(-1,-1));
+    }
+
+    return std::make_pair(true, std::make_pair(near, far));
+}    
+}
+
+template<typename V>
+std::pair<bool, std::pair<typename V::value_type, typename V::value_type>> findEnterExitFraction(const RAY<V>& ray, const AxisAlignedBoundingBox<V>& box){
+    using T = typename V::value_type;
+
+    // the fracion of the line that is in the box
+    T near = 0;
+    T far  = 1;
+
+    auto clipingInfo = clip(ClipPlane::x, ray, box, near, far);
+    if(!clipingInfo.first){
+        return std::make_pair(false, std::make_pair(-1,-1));
+    }
+
+    near = clipingInfo.second.first;
+    far = clipingInfo.second.second;
+
+    clipingInfo = clip(ClipPlane::y, ray, box, near, far);
+    if(!clipingInfo.first){
+        return std::make_pair(false, std::make_pair(-1,-1));
+    }
+
+    near = clipingInfo.second.first;
+    far = clipingInfo.second.second;
+
+    clipingInfo = clip(ClipPlane::z, ray, box, near, far);
+    if(!clipingInfo.first){
+        return std::make_pair(false, std::make_pair(-1,-1));
+    }
+
+    return std::make_pair(true, std::make_pair(near, far));
+}
+
+
 }

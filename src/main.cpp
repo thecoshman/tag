@@ -351,6 +351,8 @@ int main(int argc, char** argv){
         worldGrid.insert(std::make_pair(CubeCoord{3,  1, -5}, Cube("white_cube")));
     }
 
+    bool mouseDown = false;
+
     //Main loop
     while(!window.shouldExit()){
         {
@@ -404,17 +406,17 @@ int main(int argc, char** argv){
             printf("(%f, %f, %f) => (%i, %i, %i)\n", playerPosition.x, playerPosition.y, playerPosition.z, coord.x, coord.y, coord.z);
         }
 
-        auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
-        auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&playerVolume](const std::pair<const CubeCoord, Cube>& cube){
-            auto& coord = cube.first;
-            auto boxVolume = util::AABB(coord.x, coord.y, coord.z, 1, 1, 1);
-            return util::checkCollision(boxVolume, playerVolume); });
+        // auto playerVolume = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
+        // auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&playerVolume](const std::pair<const CubeCoord, Cube>& cube){
+        //     auto& coord = cube.first;
+        //     auto boxVolume = util::AABB(coord.x, coord.y, coord.z, 1, 1, 1);
+        //     return util::checkCollision(boxVolume, playerVolume); });
 
-        if(hitCube != worldGrid.end()){
-            auto& coord = hitCube->first;
-            worldGrid.erase(hitCube);
-            std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
-        }
+        // if(hitCube != worldGrid.end()){
+        //     auto& coord = hitCube->first;
+        //     worldGrid.erase(hitCube);
+        //     std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
+        // }
 
         if(worldGrid.size() == 0){
             printf("    you winned!\n");
@@ -422,8 +424,35 @@ int main(int argc, char** argv){
         }
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
-            std::cout << "left" << std::endl;
+            if(!mouseDown){
+                mouseDown = true;
+                glm::vec3 rayLength = glm::normalize(cam.dir);
+                util::Ray ray{cam.pos, rayLength * 30.0f};
+                
+                auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&ray](const std::pair<const CubeCoord, Cube>& cube){
+                    auto& coord = cube.first;
+                    auto aabb = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
+                    auto collisionInfo = util::findEnterExitFraction(ray, aabb);
+                    if(collisionInfo.first){
+                        std::cout << "    ray = {{" << ray.source.x << ", " << ray.source.y << ", " << ray.source.z << "},{" << ray.direction.x << ", " << ray.direction.y << ", " << ray.direction.z << "}}" << std::endl;
+                        std::cout << "    box = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
+                        std::cout << "    Ray enters box after traveling '" << collisionInfo.second.first << "' units" << std::endl;
+                        return true;
+                    } else {
+                        return false;
+                    } });
+
+                if(hitCube != worldGrid.end()){
+                    auto& coord = hitCube->first;
+                    worldGrid.erase(hitCube);
+                    std::cout << "You shot the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")!" << std::endl;
+                    std::cout << "    You now have " << worldGrid.size() << " cubes left to get" << std::endl;
+                }
+            }
+        } else {
+            mouseDown = false;
         }
+
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
             std::cout << "right" << std::endl;
         }
