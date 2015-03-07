@@ -305,6 +305,34 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
     printf("%s from %s,\t%s priority\nMessage: %s\n", errorType.c_str(), srcName.c_str(), typeSeverity.c_str(), message);
 }
 
+template<typename V>
+std::pair<bool, CubeCoord> findClosestHit(const util::RAY<V>& ray, const std::map<CubeCoord, Cube>& worldGrid){
+    using T = typename V::value_type;
+
+    T nearest = std::numeric_limits<T>::max();
+    CubeCoord hitCube;
+
+    std::for_each(worldGrid.begin(), worldGrid.end(), [&ray, &hitCube, &nearest](const std::pair<const CubeCoord, Cube>& cube){
+        auto& coord = cube.first;
+        auto aabb = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
+        auto collisionInfo = util::findEnterExitFraction(ray, aabb);
+        if(collisionInfo.first){
+            T range = collisionInfo.second.first;
+            if(range < nearest){
+                std::cout << "    ray = {{" << ray.source.x << ", " << ray.source.y << ", " << ray.source.z << "},{" << ray.direction.x << ", " << ray.direction.y << ", " << ray.direction.z << "}}" << std::endl;
+                std::cout << "    box = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
+                std::cout << "    Ray enters box after traveling '" << range << "' units" << std::endl;
+                hitCube = cube.first;
+                nearest = range;
+            }
+        }
+    });
+
+    bool actuallyHitSomething = nearest < std::numeric_limits<T>::max();
+    return std::make_pair(actuallyHitSomething, hitCube);
+}
+
+
 int main(int argc, char** argv){
     Window window;
     // glfw's C api makes it too awkard to move this stuff
@@ -435,22 +463,11 @@ int main(int argc, char** argv){
                 glm::vec3 rayLength = glm::normalize(cam.dir);
                 util::Ray ray{cam.pos, rayLength * 30.0f};
                 
-                auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&ray](const std::pair<const CubeCoord, Cube>& cube){
-                    auto& coord = cube.first;
-                    auto aabb = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
-                    auto collisionInfo = util::findEnterExitFraction(ray, aabb);
-                    if(collisionInfo.first){
-                        std::cout << "    ray = {{" << ray.source.x << ", " << ray.source.y << ", " << ray.source.z << "},{" << ray.direction.x << ", " << ray.direction.y << ", " << ray.direction.z << "}}" << std::endl;
-                        std::cout << "    box = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
-                        std::cout << "    Ray enters box after traveling '" << collisionInfo.second.first << "' units" << std::endl;
-                        return true;
-                    } else {
-                        return false;
-                    } });
+                auto hitCube = findClosestHit(ray, worldGrid);
 
-                if(hitCube != worldGrid.end()){
-                    auto& coord = hitCube->first;
-                    worldGrid.erase(hitCube);
+                if(hitCube.first){
+                    auto& coord = hitCube.second;
+                    worldGrid.erase(coord);
                     std::cout << "You shot the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")!" << std::endl;
                     std::cout << "    You now have " << worldGrid.size() << " cubes left to get" << std::endl;
                 }
