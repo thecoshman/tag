@@ -305,31 +305,26 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
     printf("%s from %s,\t%s priority\nMessage: %s\n", errorType.c_str(), srcName.c_str(), typeSeverity.c_str(), message);
 }
 
-template<typename V>
-std::pair<bool, CubeCoord> findClosestHit(const util::RAY<V>& ray, const std::map<CubeCoord, Cube>& worldGrid){
-    using T = typename V::value_type;
+template<typename V, typename T = typename V::value_type>
+std::pair<std::map<CubeCoord, Cube>::const_iterator, std::pair<T, T>> findClosestHit(const util::RAY<V>& ray, const std::map<CubeCoord, Cube>& worldGrid){
+    T max_t = std::numeric_limits<T>::max();
+    std::pair<T, T> hit_info_for_closest{max_t, max_t};
+    auto nearest = worldGrid.end();
 
-    T nearest = std::numeric_limits<T>::max();
-    CubeCoord hitCube;
-
-    std::for_each(worldGrid.begin(), worldGrid.end(), [&ray, &hitCube, &nearest](const std::pair<const CubeCoord, Cube>& cube){
-        auto& coord = cube.first;
+    for(auto ittr = worldGrid.begin(); ittr != worldGrid.end(); ittr++){
+        auto& coord = ittr->first;
         auto aabb = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
-        auto collisionInfo = util::findEnterExitFraction(ray, aabb);
-        if(collisionInfo.first){
-            T range = collisionInfo.second.first;
-            if(range < nearest){
-                std::cout << "    ray = {{" << ray.source.x << ", " << ray.source.y << ", " << ray.source.z << "},{" << ray.direction.x << ", " << ray.direction.y << ", " << ray.direction.z << "}}" << std::endl;
-                std::cout << "    box = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
-                std::cout << "    Ray enters box after traveling '" << range << "' units" << std::endl;
-                hitCube = cube.first;
-                nearest = range;
+
+        auto collision_info = util::findEnterExitFraction(ray, aabb);
+        if(collision_info.first){
+            bool new_closest = (nearest == worldGrid.end()) || (collision_info.second.first < hit_info_for_closest.first);
+            if(new_closest){
+                nearest = ittr;
+                hit_info_for_closest = collision_info.second;
             }
         }
-    });
-
-    bool actuallyHitSomething = nearest < std::numeric_limits<T>::max();
-    return std::make_pair(actuallyHitSomething, hitCube);
+    }
+    return std::make_pair(nearest, hit_info_for_closest);
 }
 
 
@@ -344,7 +339,6 @@ int main(int argc, char** argv){
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     });
     window.centreMouse();
-    // auto mousePos = window.mousePosition();
 
     glm::vec3 playerPosition = glm::vec3(10,0,-15);
     util::Camera cam;
@@ -376,10 +370,11 @@ int main(int argc, char** argv){
         worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  )));
         worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  )));
         worldGrid.insert(std::make_pair(CubeCoord{5,  1, -5}, Cube("green_cube")));
-        worldGrid.insert(std::make_pair(CubeCoord{3,  1, -5}, Cube("white_cube")));
+        worldGrid.insert(std::make_pair(CubeCoord{3,  1, -5}, Cube("green_cube")));
     }
 
-    bool mouseDown = false;
+    bool leftMouseDown = false;
+    bool rightMouseDown = false;
 
     //Main loop
     while(!window.shouldExit()){
@@ -458,26 +453,56 @@ int main(int argc, char** argv){
         }
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
-            if(!mouseDown){
-                mouseDown = true;
-                glm::vec3 rayLength = glm::normalize(cam.dir);
-                util::Ray ray{cam.pos, rayLength * 30.0f};
+            if(!leftMouseDown){
+                leftMouseDown = true;
+                glm::vec3 rayDirection = glm::normalize(cam.dir);
+                util::Ray ray{cam.pos, rayDirection * 30.0f};
                 
-                auto hitCube = findClosestHit(ray, worldGrid);
+                auto hitInfo = findClosestHit(ray, worldGrid);
 
-                if(hitCube.first){
-                    auto& coord = hitCube.second;
-                    worldGrid.erase(coord);
+                if(hitInfo.first != worldGrid.end()){
+                    worldGrid.erase(hitInfo.first);
+                    auto& coord = hitInfo.first->first;
                     std::cout << "You shot the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")!" << std::endl;
                     std::cout << "    You now have " << worldGrid.size() << " cubes left to get" << std::endl;
                 }
             }
         } else {
-            mouseDown = false;
+            leftMouseDown = false;
         }
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
-            std::cout << "right" << std::endl;
+            if(!rightMouseDown){
+                rightMouseDown = true;
+                glm::vec3 rayDirection = glm::normalize(cam.dir);
+                util::Ray ray{cam.pos, rayDirection * 30.0f};
+                
+                auto hitInfo = findClosestHit(ray, worldGrid);
+
+                if(hitInfo.first != worldGrid.end()){
+                    glm::vec3 collision_point = ray.source + (ray.direction * hitInfo.second.first);
+                    std::cout << "Picked point at (" << collision_point.x << ", " << collision_point.y << ", " << collision_point.z << ")" << std::endl;
+
+                    auto& hit_coord = hitInfo.first->first;
+                    CubeCoord create_position = hit_coord;
+                    if(hit_coord.x == collision_point.x){
+                        create_position.x--;
+                    } else if(hit_coord.x == collision_point.x - 1){
+                        create_position.x++;
+                    } else if(hit_coord.y == collision_point.y){
+                        create_position.y++;
+                    } else if(hit_coord.y == collision_point.y - 1){
+                        create_position.y--;
+                    }else if(hit_coord.z == collision_point.z){
+                        create_position.z--;
+                    } else if(hit_coord.z == collision_point.z - 1){
+                        create_position.z++;
+                    }
+                    worldGrid.insert(std::make_pair(create_position, Cube("white_cube")));
+                }
+            }
+        } else {
+            rightMouseDown = false;
         }
 
         display(cam, cubeShader, cubeVao, textures, worldGrid);

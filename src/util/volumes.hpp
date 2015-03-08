@@ -20,8 +20,6 @@ typedef AxisAlignedBoundingBox<glm::vec3> AABB;
 
 template <typename V>
 struct RAY{
-    // using T = typename V::value_type;
-
     V source, direction;
 };
 typedef RAY<glm::vec3> Ray;
