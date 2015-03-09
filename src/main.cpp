@@ -176,6 +176,10 @@ void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer
         10,11, 8,
         12,13,14,
         14,15,12,
+        16,17,18,
+        18,19,16,
+        20,21,22,
+        22,23,20,
     };
 
     std::vector<GLfloat> vertexPositions = {
@@ -198,6 +202,16 @@ void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer
         -0.5, -0.5, -0.5,
         -0.5,  0.5, -0.5,
          0.5,  0.5, -0.5,
+
+        -0.5,  0.5, -0.5,
+        -0.5,  0.5,  0.5,
+         0.5,  0.5,  0.5,
+         0.5,  0.5, -0.5,
+
+        -0.5, -0.5,  0.5,
+        -0.5, -0.5, -0.5,
+         0.5, -0.5, -0.5,
+         0.5, -0.5,  0.5,
     };
     
     std::vector<GLfloat> textureCoord = {
@@ -220,6 +234,16 @@ void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer
         0.0, 0.0,
         0.0, 1.0,
         1.0, 1.0,
+
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0,
+        1.0, 0.0,
+
+        1.0, 1.0,
+        1.0, 0.0,
+        0.0, 0.0,
+        0.0, 1.0,
     };
 
     indexBuffer.bufferData(indexdata);
@@ -268,7 +292,7 @@ void display(const util::Camera& cam, const gldr::Program& program, const gldr::
         auto modelMatrix = Cube::getModelMatrix(coord);
         gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
         textures.find(cube.textureName)->second.bind();
-        gl::DrawElements(gl::TRIANGLES, 3 * 8, gl::UNSIGNED_INT, 0);
+        gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
     }
 
     glfwSwapBuffers();
@@ -364,13 +388,14 @@ int main(int argc, char** argv){
 
     std::map<CubeCoord, Cube> worldGrid;
     {
-        worldGrid.insert(std::make_pair(CubeCoord{0,  1,  0}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{2,  1,  2}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{10, 1, 10}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{5,  1,  5}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{5,  1, -5}, Cube("green_cube")));
-        worldGrid.insert(std::make_pair(CubeCoord{3,  1, -5}, Cube("green_cube")));
+        worldGrid.insert(std::make_pair(CubeCoord{ 0,  1,  0}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{ 2,  1,  2}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{ 10, 1, 10}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{ 5,  1,  5}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{ 5,  1,  5}, Cube("red_cube"  )));
+        worldGrid.insert(std::make_pair(CubeCoord{ 5,  1, -5}, Cube("green_cube")));
+        worldGrid.insert(std::make_pair(CubeCoord{ 3,  1, -5}, Cube("green_cube")));
+        worldGrid.insert(std::make_pair(CubeCoord{-3,  4, -5}, Cube("green_cube")));
     }
 
     bool leftMouseDown = false;
@@ -491,7 +516,7 @@ int main(int argc, char** argv){
                         create_position.x++;
                     } else if(hit_coord.y == collision_point.y){
                         create_position.y++;
-                    } else if(hit_coord.y == collision_point.y - 1){
+                    } else if(hit_coord.y == collision_point.y + 1){
                         create_position.y--;
                     }else if(hit_coord.z == collision_point.z){
                         create_position.z--;
