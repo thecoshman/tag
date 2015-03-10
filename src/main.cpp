@@ -386,20 +386,26 @@ int main(int argc, char** argv){
     cubeVao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
 
+
+    const Cube red_cube_template = {"red_cube"};
+    const Cube white_cube_template = {"white_cube"};
+    const Cube green_cube_template = {"green_cube"};
     std::map<CubeCoord, Cube> worldGrid;
     {
-        worldGrid.insert(std::make_pair(CubeCoord{ 0,  1,  0}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{ 2,  1,  2}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{ 10, 1, 10}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{ 5,  1,  5}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{ 5,  1,  5}, Cube("red_cube"  )));
-        worldGrid.insert(std::make_pair(CubeCoord{ 5,  1, -5}, Cube("green_cube")));
-        worldGrid.insert(std::make_pair(CubeCoord{ 3,  1, -5}, Cube("green_cube")));
-        worldGrid.insert(std::make_pair(CubeCoord{-3,  4, -5}, Cube("green_cube")));
+        worldGrid.insert({{ 0,  1,  0}, red_cube_template});
+        worldGrid.insert({{ 2,  1,  2}, red_cube_template});
+        worldGrid.insert({{ 10, 1, 10}, red_cube_template});
+        worldGrid.insert({{ 5,  1,  5}, red_cube_template});
+        worldGrid.insert({{ 5,  1,  5}, red_cube_template});
+        worldGrid.insert({{ 5,  1, -5}, green_cube_template});
+        worldGrid.insert({{ 3,  1, -5}, green_cube_template});
+        worldGrid.insert({{-3,  4, -5}, green_cube_template});
     }
 
     bool leftMouseDown = false;
     bool rightMouseDown = false;
+
+    Cube cube_creation_template = white_cube_template;
 
     //Main loop
     while(!window.shouldExit()){
@@ -432,6 +438,15 @@ int main(int argc, char** argv){
             if(glfwGetKey('D')){
                 playerMove.x += 1.0f;
                 actuallyMoving = true;
+            }
+            if(glfwGetKey('1')){
+                cube_creation_template = red_cube_template;
+            }
+            if(glfwGetKey('2')){
+                cube_creation_template = green_cube_template;
+            }
+            if(glfwGetKey('3')){
+                cube_creation_template = white_cube_template;
             }
             if(actuallyMoving){
             playerMove = glm::normalize(playerMove); // avoid them moving faster when going diaganol
@@ -523,7 +538,7 @@ int main(int argc, char** argv){
                     } else if(hit_coord.z == collision_point.z - 1){
                         create_position.z++;
                     }
-                    worldGrid.insert(std::make_pair(create_position, Cube("white_cube")));
+                    worldGrid.insert({create_position, cube_creation_template});
                 }
             }
         } else {
