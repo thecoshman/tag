@@ -22,6 +22,7 @@
 
 #include "util/camera.hpp"
 #include "util/collisionCheckers.hpp"
+#include "util/glfw_window.hpp"
 
 struct CubeCoord{
     int x, y, z;
@@ -49,73 +50,6 @@ struct Cube{
     
     Cube(std::string textureName): textureName(textureName){};
     std::string textureName;
-};
-
-struct Window{
-    Window() : size(800,600), windowTitle("TAG V3"){
-        if(!glfwInit()){
-            throw std::runtime_error("glfwInit failed");
-        }
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
-        glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        #ifdef DEBUG
-        glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
-        #endif   
-        auto glfwWindow = glfwOpenWindow(size.x, size.y, 8, 8, 8, 8, 24, 8, GLFW_WINDOW);
-        if(!glfwWindow){
-            glfwTerminate();
-            throw std::runtime_error("glfwOpenWindow failed");
-        }
-        if(!glload::LoadFunctions()){
-            glfwTerminate();
-            throw std::runtime_error("glload::LoadFunctions failed");
-        }
-
-        glfwSetWindowTitle(windowTitle.c_str());
-    }
-
-    ~Window(){
-        glfwTerminate();
-    }
-
-    glm::ivec2 mousePosition(){
-        glfwGetMousePos(&mousePos.x, &mousePos.y);
-        return glm::ivec2(mousePos);
-    }
-
-    glm::ivec2 mouseDelta(){
-        int x,y;
-        glfwGetMousePos(&x, &y);
-        return glm::ivec2(x - mousePos.x, y - mousePos.y);   
-    }
-
-    void centreMouse(){
-        glfwSetMousePos(size.x/2, size.y/2);
-        mousePos.x = size.x/2;
-        mousePos.y = size.y/2;
-    }
-
-    void windowResize(int width, int height){
-        size.x = width;
-        size.y = height;
-        gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
-    }
-
-    bool shouldExit(){
-        return !run;
-    }
-
-    void exit(){
-        run = false;
-    }
-
-    private:
-
-    glm::ivec2 size;
-    std::string windowTitle;
-    glm::ivec2 mousePos;
-    bool run = true;
 };
 
 void initOGLsettings(){
@@ -353,7 +287,7 @@ std::pair<std::map<CubeCoord, Cube>::const_iterator, std::pair<T, T>> findCloses
 
 
 int main(int argc, char** argv){
-    Window window;
+    util::glfw_window window;
     // glfw's C api makes it too awkard to move this stuff
     if(gl::exts::var_ARB_debug_output){
         gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS_ARB);
@@ -362,7 +296,7 @@ int main(int argc, char** argv){
     glfwSetWindowSizeCallback([](int width, int height){
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     });
-    window.centreMouse();
+    window.centre_mouse();
 
     glm::vec3 playerPosition = glm::vec3(10,0,-15);
     util::Camera cam;
@@ -408,16 +342,16 @@ int main(int argc, char** argv){
     Cube cube_creation_template = white_cube_template;
 
     //Main loop
-    while(!window.shouldExit()){
+    while(!window.exit_requested()){
         {
-            auto mouseDelta = window.mouseDelta();
-            window.centreMouse();
+            auto mouseDelta = window.mouse_delta();
+            window.centre_mouse();
             cam.rotateYaw(mouseDelta.x / 10);
             cam.rotatePitch(-(mouseDelta.y / 10));
         }
 
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
-            window.exit();
+            window.request_exit();
         }
 
         {
@@ -489,7 +423,7 @@ int main(int argc, char** argv){
 
         if(worldGrid.size() == 0){
             printf("    you winned!\n");
-            window.exit();
+            window.request_exit();
         }
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
