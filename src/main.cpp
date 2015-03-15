@@ -23,6 +23,8 @@
 #include "util/camera.hpp"
 #include "util/collisionCheckers.hpp"
 #include "util/glfw_window.hpp"
+#include "tag/player.hpp"
+
 
 struct CubeCoord{
     int x, y, z;
@@ -36,10 +38,6 @@ struct CubeCoord{
 };
 
 bool operator<(const CubeCoord& lhs, const CubeCoord& rhs){
-    /*if(lhs.x < rhs.x){ return true; }
-    if(lhs.y < rhs.y){ return true; }
-    if(lhs.z < rhs.z){ return true; }
-    return false;*/
     return lhs.x < rhs.x || lhs.y < rhs.y || lhs.z < rhs.z;
 }
 
@@ -285,6 +283,23 @@ std::pair<std::map<CubeCoord, Cube>::const_iterator, std::pair<T, T>> findCloses
     return std::make_pair(nearest, hit_info_for_closest);
 }
 
+void keyboard_movement(tag::player& p){
+    if(glfwGetKey('W')){
+        p.move(tag::player::direction::forward);
+    }
+    if(glfwGetKey('S')){
+        p.move(tag::player::direction::backward);
+    }
+    if(glfwGetKey('A')){
+        p.move(tag::player::direction::left);
+    }
+    if(glfwGetKey('D')){
+        p.move(tag::player::direction::right);
+    }
+    if(glfwGetKey(' ')){
+        p.jump();
+    }
+}
 
 int main(int argc, char** argv){
     util::glfw_window window;
@@ -298,11 +313,11 @@ int main(int argc, char** argv){
     });
     window.centre_mouse();
 
-    glm::vec3 playerPosition = glm::vec3(10,0,-15);
+    tag::player player;
+    player.position = glm::vec3(10,0,-15);
     util::Camera cam;
     cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
     cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
-
     
     std::map<std::string, gldr::Texture2d> textures;
 
@@ -326,7 +341,7 @@ int main(int argc, char** argv){
     const Cube green_cube_template = {"green_cube"};
     std::map<CubeCoord, Cube> worldGrid;
     {
-        worldGrid.insert({{ 0,  1,  0}, red_cube_template});
+        worldGrid.insert({{ 0,  2,  0}, red_cube_template});
         worldGrid.insert({{ 2,  1,  2}, red_cube_template});
         worldGrid.insert({{ 10, 1, 10}, red_cube_template});
         worldGrid.insert({{ 5,  1,  5}, red_cube_template});
@@ -334,7 +349,27 @@ int main(int argc, char** argv){
         worldGrid.insert({{ 5,  1, -5}, green_cube_template});
         worldGrid.insert({{ 3,  1, -5}, green_cube_template});
         worldGrid.insert({{-3,  4, -5}, green_cube_template});
+
+        for(int x = -10; x < 10; x++){
+            for(int z = -10; z < 10; z++){
+                worldGrid.insert({{ x,  1,  z}, white_cube_template});
+            }
+        }
     }
+
+    player.is_space_free_query = [&worldGrid](util::AABB const& aabb){
+        auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&aabb](const std::pair<const CubeCoord, Cube>& cube){
+            auto& coord = cube.first;
+            auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
+            if(util::checkCollision(box, aabb)){
+                std::cout << "player = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
+                std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
+                return true;
+            } else {
+                return false;
+            } });
+        return hitCube == worldGrid.end();
+    };
 
     bool leftMouseDown = false;
     bool rightMouseDown = false;
@@ -348,6 +383,7 @@ int main(int argc, char** argv){
             window.centre_mouse();
             cam.rotateYaw(mouseDelta.x / 10);
             cam.rotatePitch(-(mouseDelta.y / 10));
+            player.view_vector = cam.dir;
         }
 
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
@@ -355,71 +391,74 @@ int main(int argc, char** argv){
         }
 
         {
-            glm::vec3 playerMove = glm::vec3(0.0f, 0.0f, 0.0f); // relative to current facing
-            bool actuallyMoving = false;
-            if(glfwGetKey('W')){
-                playerMove.z += 1.0f;
-                actuallyMoving = true;
-            }
-            if(glfwGetKey('S')){
-                playerMove.z -= 1.0f;
-                actuallyMoving = true;
-            }
-            if(glfwGetKey('A')){
-                playerMove.x -= 1.0f;
-                actuallyMoving = true;
-            }
-            if(glfwGetKey('D')){
-                playerMove.x += 1.0f;
-                actuallyMoving = true;
-            }
             if(glfwGetKey('1')){
                 cube_creation_template = red_cube_template;
-            }
-            if(glfwGetKey('2')){
+            } else if(glfwGetKey('2')){
                 cube_creation_template = green_cube_template;
-            }
-            if(glfwGetKey('3')){
+            } else if(glfwGetKey('3')){
                 cube_creation_template = white_cube_template;
             }
-            if(actuallyMoving){
-            playerMove = glm::normalize(playerMove); // avoid them moving faster when going diaganol
-            playerMove *= 0.1f;
-                
-            glm::vec3 playerForwards = glm::normalize(glm::vec3(cam.dir.x, 0.0, cam.dir.z));
-            glm::vec3 playerRight = cam.rightVector();
-            playerRight.y = 0.0f;
-            playerRight = glm::normalize(playerRight);
-    
-            playerPosition += (playerForwards * playerMove.z);
-            playerPosition += playerRight * playerMove.x;
-            cam.pos = playerPosition;
-            cam.pos.y += 1.7; // players eyes are not in their feet... I'll do this better some other time
-            }
+
+            // auto players_move = players_desired_move();
+            // auto new_player_position = player.position;
+            // if(players_move.x != 0.0f){
+            //     auto forwards_direction = glm::normalize(glm::vec3(cam.dir.x, 0.0, cam.dir.z));
+            //     new_player_position += forwards_direction * players_move.z;
+            // }
+            // if(players_move.z != 0.0f){
+            //     auto right_direction = cam.rightVector();
+            //     right_direction.y = 0.0f;
+            //     right_direction = glm::normalize(right_direction);
+            //     new_player_position += right_direction * players_move.x;
+            // }
+            // if(players_move.y != 0.0f && player.grounded){
+            //     player.v_speed = players_move.y;
+            //     player.grounded = false;
+            // }
+            // if(!player.grounded){
+            //     new_player_position.y += player.v_speed;
+            //     if(new_player_position.y < 0.0f){
+            //         new_player_position.y = 0.0f;
+            //         player.v_speed = 0.0f;
+            //         player.grounded = true;
+            //     } else {
+            //        player.v_speed -= 0.08f;
+            //     }
+            // }
+
+            // if(player.position != new_player_position){
+            //     auto new_position_aabb = util::AABB(new_player_position.x, (1.72/2), new_player_position.z, 0.9, 1.72, 0.9);
+            //     auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&new_position_aabb](const std::pair<const CubeCoord, Cube>& cube){
+            //         auto& coord = cube.first;
+            //         auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
+            //         if(util::checkCollision(box, new_position_aabb)){
+            //             std::cout << "player = {{" << new_position_aabb.min.x << ", " << new_position_aabb.min.y << ", " << new_position_aabb.min.z << "},{" << new_position_aabb.max.x << ", " << new_position_aabb.max.y << ", " << new_position_aabb.max.z << "}}" << std::endl;
+            //             std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
+            //             return true;
+            //         } else {
+            //             return false;
+            //         } });
+
+            //     if(hitCube != worldGrid.end()){
+            //         auto& coord = hitCube->first;
+            //         // worldGrid.erase(hitCube);
+            //         std::cout << "You hit a cube at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
+            //         player.grounded = true;
+            //     } else {
+            //         player.position = new_player_position;
+            //         cam.pos = player.position;
+            //         cam.pos.y += 1.7; // players eyes are not in their feet... I'll do this better some other time
+            //     }
+            // }
         }
 
         if(glfwGetKey('P')){
-            CubeCoord coord = CubeCoord::fromGlmVec3(playerPosition);
-            printf("(%f, %f, %f) => (%i, %i, %i)\n", playerPosition.x, playerPosition.y, playerPosition.z, coord.x, coord.y, coord.z);
+            CubeCoord coord = CubeCoord::fromGlmVec3(player.position);
+            printf("(%f, %f, %f) => (%i, %i, %i)\n", player.position.x, player.position.y, player.position.z, coord.x, coord.y, coord.z);
         }
 
-        auto playerBox = util::AABB(playerPosition.x, (1.72/2), playerPosition.z, 0.9, 1.72, 0.9);
-        auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&playerBox](const std::pair<const CubeCoord, Cube>& cube){
-            auto& coord = cube.first;
-            auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
-            if(util::checkCollision(box, playerBox)){
-                std::cout << "player = {{" << playerBox.min.x << ", " << playerBox.min.y << ", " << playerBox.min.z << "},{" << playerBox.max.x << ", " << playerBox.max.y << ", " << playerBox.max.z << "}}" << std::endl;
-                std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
-                return true;
-            } else {
-                return false;
-            } });
-
-        if(hitCube != worldGrid.end()){
-            auto& coord = hitCube->first;
-            worldGrid.erase(hitCube);
-            std::cout << "You got the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")! You now have " << worldGrid.size() << " cubes left to get" << std::endl;
-        }
+        keyboard_movement(player);
+        player.apply_gravity();
 
         if(worldGrid.size() == 0){
             printf("    you winned!\n");
@@ -479,6 +518,7 @@ int main(int argc, char** argv){
             rightMouseDown = false;
         }
 
+        cam.pos = player.eye_point();
         display(cam, cubeShader, cubeVao, textures, worldGrid);
     }
     return 0;
