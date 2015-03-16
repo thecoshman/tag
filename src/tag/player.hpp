@@ -36,11 +36,14 @@ struct player{
 
     void apply_gravity(){
         if(grounded){
-            // check to see if we need to start falling?
+            auto aabb = util::AABB(position.x, position.y + (1.72/2) - 0.1, position.z, 0.8, 1.72, 0.8);
+            if(is_space_free_query(aabb)){
+                grounded = false;
+            }
         } else {
             auto proposed_position = position;
             proposed_position.y += v_speed;
-            v_speed -= 0.05f;
+            v_speed -= 0.04f;
 
             auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
             if(proposed_position.y >= 0.0f && is_space_free_query(aabb)){
@@ -58,7 +61,7 @@ struct player{
 
     const float eye_height = 1.72;
     const float walk_speed = 0.1;
-    const float jump_start_speed = 0.5f;
+    const float jump_start_speed = 0.4f;
 
     glm::vec3 view_vector;
     glm::vec3 position;

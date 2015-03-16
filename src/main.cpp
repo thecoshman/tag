@@ -24,6 +24,7 @@
 #include "util/collisionCheckers.hpp"
 #include "util/glfw_window.hpp"
 #include "tag/player.hpp"
+#include "simplex.hpp"
 
 
 struct CubeCoord{
@@ -352,8 +353,14 @@ int main(int argc, char** argv){
 
         for(int x = -10; x < 10; x++){
             for(int z = -10; z < 10; z++){
-                worldGrid.insert({{ x,  1,  z}, white_cube_template});
+                // worldGrid.insert({{ x,  1,  z}, white_cube_template});
+                float height =  (util::simplex_noise(2, x, z) + 1) * 1;
+                std::cout << height << " ";
+                for(int y = 0; y < height; y++){
+                    worldGrid.insert({{ x,  y + 1,  z}, white_cube_template});                    
+                }
             }
+            std::cout << std::endl;
         }
     }
 
@@ -362,8 +369,8 @@ int main(int argc, char** argv){
             auto& coord = cube.first;
             auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
             if(util::checkCollision(box, aabb)){
-                std::cout << "player = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
-                std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
+                // std::cout << "player = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
+                // std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
                 return true;
             } else {
                 return false;
