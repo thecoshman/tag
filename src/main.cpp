@@ -284,26 +284,93 @@ std::pair<std::map<CubeCoord, Cube>::const_iterator, std::pair<T, T>> findCloses
     return std::make_pair(nearest, hit_info_for_closest);
 }
 
-void keyboard_movement(tag::player& p){
-    if(glfwGetKey('W')){
-        p.move(tag::player::direction::forward);
+struct voxel_grid{
+    void generate_world(){    
+        const Cube red_cube_template = {"red_cube"};
+        const Cube white_cube_template = {"white_cube"};
+        const Cube green_cube_template = {"green_cube"};
+        grid.insert({{ 0,  2,  0}, red_cube_template});
+        grid.insert({{ 2,  1,  2}, red_cube_template});
+        grid.insert({{ 10, 1, 10}, red_cube_template});
+        grid.insert({{ 5,  1,  5}, red_cube_template});
+        grid.insert({{ 5,  1,  5}, red_cube_template});
+        grid.insert({{ 5,  1, -5}, green_cube_template});
+        grid.insert({{ 3,  1, -5}, green_cube_template});
+        grid.insert({{-3,  4, -5}, green_cube_template});
+
+        for(int x = -100; x <= 100; x++){
+            for(int z = -100; z <= 100; z++){
+                // grid.insert({{ x,  1,  z}, white_cube_template});
+                float height =  (util::simplex_noise(2, x, z) + 1) * 1;
+                std::cout << height << " ";
+                for(int y = 0; y < height; y++){
+                    grid.insert({{ x,  y + 1,  z}, white_cube_template});                    
+                }
+            }
+            std::cout << std::endl;
+        }
     }
-    if(glfwGetKey('S')){
-        p.move(tag::player::direction::backward);
+
+    std::map<CubeCoord, Cube> grid;
+};
+
+struct application{
+    application(){
+        player.position = glm::vec3(10,10,10);
+
+        cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
+        cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
+
+        player.is_space_free_query = [this](util::AABB const& aabb){
+            auto hitCube = std::find_if(world.grid.begin(), world.grid.end(), [&aabb](const std::pair<const CubeCoord, Cube>& cube){
+                auto& coord = cube.first;
+                auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
+                if(util::checkCollision(box, aabb)){
+                    return true;
+                } else {
+                    return false;
+                } });
+            return hitCube == world.grid.end();
+        };
+
+        world.generate_world();
     }
-    if(glfwGetKey('A')){
-        p.move(tag::player::direction::left);
+
+    void keyboard_movement(){
+        if(glfwGetKey('W')){
+            player.move(tag::player::direction::forward);
+        }
+        if(glfwGetKey('S')){
+            player.move(tag::player::direction::backward);
+        }
+        if(glfwGetKey('A')){
+            player.move(tag::player::direction::left);
+        }
+        if(glfwGetKey('D')){
+            player.move(tag::player::direction::right);
+        }
+        if(glfwGetKey(' ')){
+            player.jump();
+        }
     }
-    if(glfwGetKey('D')){
-        p.move(tag::player::direction::right);
+
+    void mouse_movement(){
+        auto mouseDelta = window.mouse_delta();
+        window.centre_mouse();
+        cam.rotateYaw(mouseDelta.x / 10);
+        cam.rotatePitch(-(mouseDelta.y / 10));
+        player.view_vector = cam.dir;
     }
-    if(glfwGetKey(' ')){
-        p.jump();
-    }
-}
+
+    tag::player player;
+    util::Camera cam;
+    voxel_grid world;
+    util::glfw_window window;
+};
 
 int main(int argc, char** argv){
-    util::glfw_window window;
+    application app;
+
     // glfw's C api makes it too awkard to move this stuff
     if(gl::exts::var_ARB_debug_output){
         gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS_ARB);
@@ -312,13 +379,8 @@ int main(int argc, char** argv){
     glfwSetWindowSizeCallback([](int width, int height){
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     });
-    window.centre_mouse();
+    app.window.centre_mouse();
 
-    tag::player player;
-    player.position = glm::vec3(10,0,-15);
-    util::Camera cam;
-    cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
-    cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
     
     std::map<std::string, gldr::Texture2d> textures;
 
@@ -336,47 +398,9 @@ int main(int argc, char** argv){
     cubeVao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
 
-
     const Cube red_cube_template = {"red_cube"};
     const Cube white_cube_template = {"white_cube"};
     const Cube green_cube_template = {"green_cube"};
-    std::map<CubeCoord, Cube> worldGrid;
-    {
-        worldGrid.insert({{ 0,  2,  0}, red_cube_template});
-        worldGrid.insert({{ 2,  1,  2}, red_cube_template});
-        worldGrid.insert({{ 10, 1, 10}, red_cube_template});
-        worldGrid.insert({{ 5,  1,  5}, red_cube_template});
-        worldGrid.insert({{ 5,  1,  5}, red_cube_template});
-        worldGrid.insert({{ 5,  1, -5}, green_cube_template});
-        worldGrid.insert({{ 3,  1, -5}, green_cube_template});
-        worldGrid.insert({{-3,  4, -5}, green_cube_template});
-
-        for(int x = -10; x < 10; x++){
-            for(int z = -10; z < 10; z++){
-                // worldGrid.insert({{ x,  1,  z}, white_cube_template});
-                float height =  (util::simplex_noise(2, x, z) + 1) * 1;
-                std::cout << height << " ";
-                for(int y = 0; y < height; y++){
-                    worldGrid.insert({{ x,  y + 1,  z}, white_cube_template});                    
-                }
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    player.is_space_free_query = [&worldGrid](util::AABB const& aabb){
-        auto hitCube = std::find_if(worldGrid.begin(), worldGrid.end(), [&aabb](const std::pair<const CubeCoord, Cube>& cube){
-            auto& coord = cube.first;
-            auto box = util::AABB(coord.x + 0.5, coord.y - 0.5, coord.z + 0.5, 1, 1, 1);
-            if(util::checkCollision(box, aabb)){
-                // std::cout << "player = {{" << aabb.min.x << ", " << aabb.min.y << ", " << aabb.min.z << "},{" << aabb.max.x << ", " << aabb.max.y << ", " << aabb.max.z << "}}" << std::endl;
-                // std::cout << "box    = {{" << box.min.x << ", " << box.min.y << ", " << box.min.z << "},{" << box.max.x << ", " << box.max.y << ", " << box.max.z << "}}" << std::endl;
-                return true;
-            } else {
-                return false;
-            } });
-        return hitCube == worldGrid.end();
-    };
 
     bool leftMouseDown = false;
     bool rightMouseDown = false;
@@ -384,17 +408,11 @@ int main(int argc, char** argv){
     Cube cube_creation_template = white_cube_template;
 
     //Main loop
-    while(!window.exit_requested()){
-        {
-            auto mouseDelta = window.mouse_delta();
-            window.centre_mouse();
-            cam.rotateYaw(mouseDelta.x / 10);
-            cam.rotatePitch(-(mouseDelta.y / 10));
-            player.view_vector = cam.dir;
-        }
-
+    while(!app.window.exit_requested()){
+        app.mouse_movement();
+        
         if(glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)){
-            window.request_exit();
+            app.window.request_exit();
         }
 
         {
@@ -460,31 +478,31 @@ int main(int argc, char** argv){
         }
 
         if(glfwGetKey('P')){
-            CubeCoord coord = CubeCoord::fromGlmVec3(player.position);
-            printf("(%f, %f, %f) => (%i, %i, %i)\n", player.position.x, player.position.y, player.position.z, coord.x, coord.y, coord.z);
+            CubeCoord coord = CubeCoord::fromGlmVec3(app.player.position);
+            printf("(%f, %f, %f) => (%i, %i, %i)\n", app.player.position.x, app.player.position.y, app.player.position.z, coord.x, coord.y, coord.z);
         }
 
-        keyboard_movement(player);
-        player.apply_gravity();
+        app.keyboard_movement();
+        app.player.apply_gravity();
 
-        if(worldGrid.size() == 0){
+        if(app.world.grid.size() == 0){
             printf("    you winned!\n");
-            window.request_exit();
+            app.window.request_exit();
         }
 
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
             if(!leftMouseDown){
                 leftMouseDown = true;
-                glm::vec3 rayDirection = glm::normalize(cam.dir);
-                util::Ray ray{cam.pos, rayDirection * 30.0f};
+                glm::vec3 rayDirection = glm::normalize(app.cam.dir);
+                util::Ray ray{app.cam.pos, rayDirection * 30.0f};
                 
-                auto hitInfo = findClosestHit(ray, worldGrid);
+                auto hitInfo = findClosestHit(ray, app.world.grid);
 
-                if(hitInfo.first != worldGrid.end()){
-                    worldGrid.erase(hitInfo.first);
+                if(hitInfo.first != app.world.grid.end()){
+                    app.world.grid.erase(hitInfo.first);
                     auto& coord = hitInfo.first->first;
                     std::cout << "You shot the box at (" << coord.x << ", " << coord.y << ", " << coord.z << ")!" << std::endl;
-                    std::cout << "    You now have " << worldGrid.size() << " cubes left to get" << std::endl;
+                    std::cout << "    You now have " << app.world.grid.size() << " cubes left to get" << std::endl;
                 }
             }
         } else {
@@ -494,12 +512,12 @@ int main(int argc, char** argv){
         if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
             if(!rightMouseDown){
                 rightMouseDown = true;
-                glm::vec3 rayDirection = glm::normalize(cam.dir);
-                util::Ray ray{cam.pos, rayDirection * 30.0f};
+                glm::vec3 rayDirection = glm::normalize(app.cam.dir);
+                util::Ray ray{app.cam.pos, rayDirection * 30.0f};
                 
-                auto hitInfo = findClosestHit(ray, worldGrid);
+                auto hitInfo = findClosestHit(ray, app.world.grid);
 
-                if(hitInfo.first != worldGrid.end()){
+                if(hitInfo.first != app.world.grid.end()){
                     glm::vec3 collision_point = ray.source + (ray.direction * hitInfo.second.first);
                     std::cout << "Picked point at (" << collision_point.x << ", " << collision_point.y << ", " << collision_point.z << ")" << std::endl;
 
@@ -518,15 +536,15 @@ int main(int argc, char** argv){
                     } else if(hit_coord.z == collision_point.z - 1){
                         create_position.z++;
                     }
-                    worldGrid.insert({create_position, cube_creation_template});
+                    app.world.grid.insert({create_position, cube_creation_template});
                 }
             }
         } else {
             rightMouseDown = false;
         }
 
-        cam.pos = player.eye_point();
-        display(cam, cubeShader, cubeVao, textures, worldGrid);
+        app.cam.pos = app.player.eye_point();
+        display(app.cam, cubeShader, cubeVao, textures, app.world.grid);
     }
     return 0;
 }
