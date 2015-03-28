@@ -1,5 +1,6 @@
 #pragma once
 //#include <glm/glm.hpp>
+#include <cmath>
 
 namespace tag{
 struct player{
@@ -8,51 +9,49 @@ struct player{
     };
 
     void move(direction d){
+        auto move_speed = walk_speed;
+        if(!grounded){
+            move_speed /= 10;
+        }
         glm::vec3 translation;
         switch (d){
             case direction::forward:
-                translation = forward_vector() * walk_speed;break;
+                translation += forward_vector() * move_speed;break;
             case direction::backward:
-                translation = forward_vector() * -walk_speed;break;
+                translation += forward_vector() * -move_speed;break;
             case direction::left:
-                translation = right_vector() * -walk_speed; break;
+                translation += right_vector() * -move_speed; break;
             case direction::right:
-                translation = right_vector() * walk_speed; break;
+                translation += right_vector() * move_speed; break;
         }
-        auto proposed_position = position + translation;
+        if(translation.x > 0.0f){
+            velocity.x = std::max(velocity.x, translation.x);
+        } else {
+            velocity.x = std::min(velocity.x, translation.x);
+        }
+        if(translation.z > 0.0f){
+            velocity.z = std::max(velocity.z, translation.z);
+        } else {
+            velocity.z = std::min(velocity.z, translation.z);
+        }
+        // auto proposed_position = position + translation;
 
-        auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
-        if(is_space_free_query(aabb)){
-            position = proposed_position;
-        }
+        // auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
+        // if(is_space_free_query(aabb)){
+        //     position = proposed_position;
+        // }
     }
 
     void jump(){
         if(grounded){
             grounded = false;
-            v_speed = jump_start_speed;
+            velocity.y = jump_start_speed;
         }
     }
 
-    void apply_gravity(){
-        if(grounded){
-            auto aabb = util::AABB(position.x, position.y + (1.72/2) - 0.1, position.z, 0.8, 1.72, 0.8);
-            if(is_space_free_query(aabb)){
-                grounded = false;
-            }
-        } else {
-            auto proposed_position = position;
-            proposed_position.y += v_speed;
-            v_speed -= 0.04f;
-
-            auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
-            if(proposed_position.y >= 0.0f && is_space_free_query(aabb)){
-                position = proposed_position;
-            } else {
-                grounded = true;
-                v_speed = 0.0f;
-            }
-        }
+    void update(float dt){
+        do_falling(dt);
+        do_walking(dt);
     }
 
     glm::vec3 eye_point(){
@@ -60,12 +59,12 @@ struct player{
     }
 
     const float eye_height = 1.72;
-    const float walk_speed = 0.1;
-    const float jump_start_speed = 0.4f;
+    const float walk_speed = 8.0f;
+    const float jump_start_speed = 5.0f;
 
     glm::vec3 view_vector;
     glm::vec3 position;
-    float v_speed = 0.0f;
+    glm::vec3 velocity;
     bool grounded = true;
     std::function<bool(util::AABB const&)> is_space_free_query = [](util::AABB const & aabb){ return true;};
 
@@ -74,8 +73,64 @@ struct player{
     glm::vec3 forward_vector() const{
         return glm::normalize(glm::vec3(view_vector.x, 0.0, view_vector.z));
     }
+
     glm::vec3 right_vector() const{
         return glm::cross(view_vector, glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    void do_walking(float dt){
+        auto proposed_position = position + (velocity * (dt/1000));
+        proposed_position.y = position.y;
+
+        auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), position.z, 0.8, 1.72, 0.8);
+        if(is_space_free_query(aabb)){
+            position.x = proposed_position.x;
+        } else {
+            velocity.x = 0.0f;
+        }
+
+        aabb = util::AABB(position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
+        if(is_space_free_query(aabb)){
+            position.z = proposed_position.z;
+        } else {
+            velocity.z = 0.0f;
+        }
+
+        float friction = 0.1;
+        if(!grounded){
+            friction = 0.01;
+        }    
+        auto apply_friction = [friction](float& vel){
+            float speed_loss = vel * friction;
+            if(abs(speed_loss) > abs(vel)){
+                vel = 0.0f;
+            } else {
+                vel -= speed_loss;
+            }
+        };
+        apply_friction(velocity.x);
+        apply_friction(velocity.z);
+    }
+
+    void do_falling(float dt){
+        if(grounded){
+            auto aabb = util::AABB(position.x, position.y + (1.72/2) - 0.1, position.z, 0.8, 1.72, 0.8);
+            if(is_space_free_query(aabb)){
+                grounded = false;
+            }
+        } else {
+            auto proposed_position = position;
+            proposed_position.y += velocity.y * (dt/1000);
+            velocity.y -= 9.8f * (dt/1000);
+
+            auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
+            if(proposed_position.y >= 0.0f && is_space_free_query(aabb)){
+                position = proposed_position;
+            } else {
+                grounded = true;
+                velocity.y = 0.0f;
+            }
+        }
     }
 };
 }
