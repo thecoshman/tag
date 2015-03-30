@@ -13,33 +13,27 @@ struct player{
         if(!grounded){
             move_speed /= 10;
         }
-        glm::vec3 translation;
+        glm::vec3 desrired_velocity;
         switch (d){
             case direction::forward:
-                translation += forward_vector() * move_speed;break;
+                desrired_velocity += forward_vector() * move_speed;break;
             case direction::backward:
-                translation += forward_vector() * -move_speed;break;
+                desrired_velocity += forward_vector() * -move_speed;break;
             case direction::left:
-                translation += right_vector() * -move_speed; break;
+                desrired_velocity += right_vector() * -move_speed; break;
             case direction::right:
-                translation += right_vector() * move_speed; break;
+                desrired_velocity += right_vector() * move_speed; break;
         }
-        if(translation.x > 0.0f){
-            velocity.x = std::max(velocity.x, translation.x);
+        if(desrired_velocity.x > 0.0f){
+            velocity.x = std::max(velocity.x, desrired_velocity.x);
         } else {
-            velocity.x = std::min(velocity.x, translation.x);
+            velocity.x = std::min(velocity.x, desrired_velocity.x);
         }
-        if(translation.z > 0.0f){
-            velocity.z = std::max(velocity.z, translation.z);
+        if(desrired_velocity.z > 0.0f){
+            velocity.z = std::max(velocity.z, desrired_velocity.z);
         } else {
-            velocity.z = std::min(velocity.z, translation.z);
+            velocity.z = std::min(velocity.z, desrired_velocity.z);
         }
-        // auto proposed_position = position + translation;
-
-        // auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
-        // if(is_space_free_query(aabb)){
-        //     position = proposed_position;
-        // }
     }
 
     void jump(){
@@ -96,7 +90,7 @@ struct player{
             velocity.z = 0.0f;
         }
 
-        float friction = 0.1;
+        float friction = 0.25;
         if(!grounded){
             friction = 0.01;
         }    

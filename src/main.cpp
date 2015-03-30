@@ -324,7 +324,7 @@ int main(int argc, char** argv){
     float startup_time = to_microseconds(delta_time);
     std::cout << "app took " << startup_time/1000 << " milliseconds to start." << std::endl;
 
-    const float physics_step = 1000.0f / 120;
+    const float physics_step = 1000.0f / 60;
     std::cout << "physics_step set to: " << physics_step << std::endl;
     float temporal_accumulator = 0.0;
 
@@ -338,15 +338,10 @@ int main(int argc, char** argv){
         while(temporal_accumulator >  physics_step){
             temporal_accumulator -= physics_step;
 
-            if(!glfwGetWindowParam(GLFW_OPENED)){
-                app.window.request_exit();
-            }
-
             app.update(physics_step);
         }
 
-        if(app.world.grid.size() == 0){
-            printf("    you winned!\n");
+        if(!glfwGetWindowParam(GLFW_OPENED)){
             app.window.request_exit();
         }
 
