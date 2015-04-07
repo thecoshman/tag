@@ -187,27 +187,6 @@ gldr::Texture2d loadTexture(const std::string& file){
     return texture;
 }
 
-void display(const util::Camera& cam, const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures, const std::map<CubeCoord, Cube>& worldGrid){
-    gl::Clear(gl::COLOR_BUFFER_BIT);
-    gl::Clear(gl::DEPTH_BUFFER_BIT);
-
-    vao.bind();
-    program.use();
-    GLint mvpMat = program.getUniformLocation("mvpMat");
-    auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
-
-    for (auto &pair : worldGrid){
-        CubeCoord coord = pair.first;
-        Cube cube = pair.second;
-        auto modelMatrix = Cube::getModelMatrix(coord);
-        gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
-        textures.find(cube.textureName)->second.bind();
-        gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
-    }
-
-    glfwSwapBuffers();
-}
-
 void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam){
     std::string srcName;
     switch(source){
@@ -241,40 +220,26 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
 
 void break_block(application& app){
     glm::vec3 rayDirection = glm::normalize(app.cam.dir);
-    util::Ray ray{app.cam.pos, rayDirection * 30.0f};
-    
-    auto hitInfo = findClosestHit(ray, app.world.grid);
+    util::Ray ray{app.cam.pos, rayDirection * 5.0f};
 
-    if(hitInfo.first != app.world.grid.end()){
-        app.world.grid.erase(hitInfo.first);
+    auto hit_blocks = app.world.trace_ray(ray);
+    if(!hit_blocks.empty()){
+        app.world.set(hit_blocks[0].first, voxel_grid::cube_template());
     }
 }
 
 void place_block(application& app){
     glm::vec3 rayDirection = glm::normalize(app.cam.dir);
-    util::Ray ray{app.cam.pos, rayDirection * 30.0f};
+    util::Ray ray{app.cam.pos, rayDirection * 5.0f};
     
-    auto hitInfo = findClosestHit(ray, app.world.grid);
-
-    if(hitInfo.first != app.world.grid.end()){
-        glm::vec3 collision_point = ray.source + (ray.direction * hitInfo.second.first);
-
-        auto& hit_coord = hitInfo.first->first;
-        CubeCoord create_position = hit_coord;
-        if(hit_coord.x == collision_point.x){
-            create_position.x--;
-        } else if(hit_coord.x == collision_point.x - 1){
-            create_position.x++;
-        } else if(hit_coord.y == collision_point.y){
-            create_position.y++;
-        } else if(hit_coord.y == collision_point.y + 1){
-            create_position.y--;
-        }else if(hit_coord.z == collision_point.z){
-            create_position.z--;
-        } else if(hit_coord.z == collision_point.z - 1){
-            create_position.z++;
+    auto hit_blocks = app.world.trace_ray(ray, voxel_grid::chunked_voxel_grid::trace_ray_options::include_empty);
+    for(uint i = 0; i + 1 < hit_blocks.size(); i++){
+        auto current = hit_blocks[i];
+        auto next = hit_blocks[i+1];
+        if(current.second.textureName == "empty" && next.second.textureName != "empty"){
+            app.world.set(current.first, app.cube_creation_template);
+            break;
         }
-        app.world.grid.insert({create_position, app.cube_creation_template});
     }
 }
 
@@ -301,7 +266,6 @@ int main(int argc, char** argv){
     app.window.centre_mouse();
     
     std::map<std::string, gldr::Texture2d> textures;
-
     textures.insert(std::make_pair("red_cube", loadTexture("resource/texture/reference_cube.png")));
     textures.insert(std::make_pair("green_cube", loadTexture("resource/texture/green_cube.png")));
     textures.insert(std::make_pair("white_cube", loadTexture("resource/texture/white_cube.png")));
@@ -324,7 +288,7 @@ int main(int argc, char** argv){
     float startup_time = to_microseconds(delta_time);
     std::cout << "app took " << startup_time/1000 << " milliseconds to start." << std::endl;
 
-    const float physics_step = 1000.0f / 60;
+    const float physics_step = 1000.0f / 30;
     std::cout << "physics_step set to: " << physics_step << std::endl;
     float temporal_accumulator = 0.0;
 
@@ -341,12 +305,16 @@ int main(int argc, char** argv){
             app.update(physics_step);
         }
 
+        // std::cout << "update time: " << (to_microseconds(clock::now() - new_time)/1000);
+
         if(!glfwGetWindowParam(GLFW_OPENED)){
             app.window.request_exit();
         }
 
         app.cam.pos = app.player.eye_point();
-        display(app.cam, cubeShader, cubeVao, textures, app.world.grid);
+        app.display(cubeShader, cubeVao, textures);
+
+        // std::cout << " display time: " << (to_microseconds(clock::now() - new_time)/1000) << "\n";
     }
     return 0;
 }

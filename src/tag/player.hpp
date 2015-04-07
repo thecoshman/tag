@@ -4,7 +4,7 @@
 
 namespace tag{
 struct player{
-    enum direction {
+    enum direction{
         forward, backward, left, right,
     };
 
@@ -54,14 +54,14 @@ struct player{
 
     const float eye_height = 1.72;
     const float walk_speed = 8.0f;
-    const float jump_start_speed = 5.0f;
+    const float jump_start_speed = 4.9f;
+    const float gravity = 9.8f;
 
     glm::vec3 view_vector;
     glm::vec3 position;
     glm::vec3 velocity;
     bool grounded = true;
     std::function<bool(util::AABB const&)> is_space_free_query = [](util::AABB const & aabb){ return true;};
-
 
     private:
     glm::vec3 forward_vector() const{
@@ -115,7 +115,7 @@ struct player{
         } else {
             auto proposed_position = position;
             proposed_position.y += velocity.y * (dt/1000);
-            velocity.y -= 9.8f * (dt/1000);
+            velocity.y -= gravity * (dt/1000);
 
             auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
             if(proposed_position.y >= 0.0f && is_space_free_query(aabb)){

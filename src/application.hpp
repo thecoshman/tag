@@ -5,10 +5,10 @@
 
 
 namespace{
-    std::vector<CubeCoord> get_overlapping_coords(util::AABB const& aabb){
-        auto min = CubeCoord::fromGlmVec3(aabb.min);
-        auto max = CubeCoord::fromGlmVec3(aabb.max);
-        std::vector<CubeCoord> overlapping_coords;
+    std::vector<voxel_grid::world_coord> get_overlapping_coords(util::AABB const& aabb){
+        auto min = voxel_grid::world_coord::fromGlmVec3(aabb.min);
+        auto max = voxel_grid::world_coord::fromGlmVec3(aabb.max);
+        std::vector<voxel_grid::world_coord> overlapping_coords;
         for(int x = min.x; x <= max.x ; x++){
             for(int y = min.y; y <= max.y ; y++){
                 for(int z = min.z; z <= max.z ; z++){
@@ -29,8 +29,8 @@ struct application{
 
         player.is_space_free_query = [&](util::AABB const& aabb){
             auto potential_hits = get_overlapping_coords(aabb);
-            for(auto test_coord : potential_hits){
-                if(!world.get(test_coord).is_passable){
+            for(auto coord : potential_hits){
+                if(!world.get(coord).is_passable){
                     return false;
                 }
             }
@@ -96,24 +96,55 @@ struct application{
         }
     }
 
-    void update(float dt){        
+    void update(float dt){
         mouse_input(dt);
         keyboard_input(dt);
         player.update(dt);
     }
 
+    void display(const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures){
+        gl::Clear(gl::COLOR_BUFFER_BIT);
+        gl::Clear(gl::DEPTH_BUFFER_BIT);
+
+        vao.bind();
+        program.use();
+        GLint mvpMat = program.getUniformLocation("mvpMat");
+        auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
+
+        std::string current_texture;// = "null";
+
+        auto coord = voxel_grid::world_coord::fromGlmVec3(player.position);
+        for(auto chunk : world.get_display_chunks(coord, 1)){
+            for(auto &cube_pair : chunk.renderable_cubes){
+                auto modelMatrix = voxel_grid::cube_template::getModelMatrix(cube_pair.first);
+                gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
+
+                auto cube = cube_pair.second;
+                if(cube.textureName != current_texture){
+                    current_texture = cube.textureName;
+                    textures.find(current_texture)->second.bind();
+                }
+                gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
+            }
+
+        }
+
+        glfwSwapBuffers();
+    }
+
     util::glfw_window window;
     tag::player player;
     util::Camera cam;
-    voxel_grid world;
+    voxel_grid::chunked_voxel_grid world;
     bool run = true;
     bool leftMouseDown = false;
     bool rightMouseDown = false;
-    const Cube red_cube_template = {"red_cube"};
-    const Cube white_cube_template = {"white_cube"};
-    const Cube green_cube_template = {"green_cube"};
+    const voxel_grid::cube_template red_cube_template = {"red_cube"};
+    const voxel_grid::cube_template white_cube_template = {"white_cube"};
+    const voxel_grid::cube_template green_cube_template = {"green_cube"};
 
-    Cube cube_creation_template = white_cube_template;
+    voxel_grid::cube_template cube_creation_template = white_cube_template;
+    voxel_grid::cube_template cube_creation_template_tmp{"red_cube"};
 
 
     std::function<void(application&)> on_left_click_fn = [](application&){};
