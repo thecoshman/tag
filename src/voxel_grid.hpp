@@ -38,6 +38,9 @@ namespace voxel_grid {
 
     struct data_chunk{
         void generate(const chunk_coord& coord_chunk){
+            if(coord_chunk.y != 0){
+                return; // for now, can only generate chunks at y=0 :(
+            }
             auto coord_world = to_world_coord(coord_chunk);
 
             cube_template red_cube_template("red_cube", false);
@@ -75,7 +78,7 @@ namespace voxel_grid {
             voxel_array[index(coord)] = cube;
         }
         
-        cube_template get(const intra_chunk_coord& coord) const{
+        const cube_template& get(const intra_chunk_coord& coord) const{
             return voxel_array[index(coord)];
         }
 
@@ -84,7 +87,7 @@ namespace voxel_grid {
         }
 
         private:
-        int index(const intra_chunk_coord& coord) const{     
+        int index(const intra_chunk_coord& coord) const{
             int x = coord.x * chunk_size;
             int y = coord.y * chunk_size * chunk_size;
             int z = coord.z;
@@ -118,23 +121,22 @@ namespace voxel_grid {
     };
 
     struct chunked_voxel_grid{
-        void generate_world(){
-            for(int chunk_x = -10; chunk_x < 10; chunk_x++){ for(int chunk_y = 0; chunk_y < 1; chunk_y++){ for(int chunk_z = -10; chunk_z < 10; chunk_z++){
-                chunk_coord coord_chunk(chunk_x, chunk_y, chunk_z);
-                data_chunk chunk;
-                chunk.generate(coord_chunk);
-                chunk_data.insert({coord_chunk, chunk});
-            }
-        }}}
+        void generate_world(const world_coord& coord_world, int range){
+            auto main_chunk_coord = from_world_coord(coord_world).first;
 
-        cube_template get(const world_coord& coord_world) const{
-            auto coord_chunk = from_world_coord(coord_world);
-            auto chunk_search = chunk_data.find(coord_chunk.first);
-            if(chunk_search == chunk_data.end()){
-                return cube_template();
-            } else {
-                return chunk_search->second.get(coord_chunk.second);
+            auto chunk_range = make_coord_range<chunk_coord>(
+                {main_chunk_coord.x - range, 0, main_chunk_coord.z - range},
+                {main_chunk_coord.x + range, 0, main_chunk_coord.z + range});
+
+            for(auto coord : chunk_range){
+                get_data_chunk(coord);
             }
+        }
+
+        const cube_template& get(const world_coord& coord_world) const{
+            auto chunk_coord_pair = from_world_coord(coord_world);
+            auto chunk = get_data_chunk(chunk_coord_pair.first);
+            return chunk.get(chunk_coord_pair.second);
         }
 
         enum trace_ray_options{
@@ -204,21 +206,16 @@ namespace voxel_grid {
 
         void set(const world_coord& coord_world, const cube_template& cube){
             auto chunk_coord_pair = from_world_coord(coord_world);
-            auto chunk_search = chunk_data.find(chunk_coord_pair.first);
-            if(chunk_search == chunk_data.end()){
-                std::cout << coord_world << " is in an ungenerated/unloaded chunk\n";
-                return;
-            } else {
-                chunk_search->second.set(chunk_coord_pair.second, cube);
-                display_chunk_cache.erase(chunk_coord_pair.first); // it's no longer valid
-            }
+            auto& chunk = get_data_chunk(chunk_coord_pair.first);
+            chunk.set(chunk_coord_pair.second, cube);
+            display_chunk_cache.erase(chunk_coord_pair.first); // it's no longer valid
         }
 
-        std::vector<display_chunk> get_display_chunks(const world_coord& coord_world, int range){
+        std::vector<display_chunk> get_display_chunks(const world_coord& coord_world, int range) const{
             auto main_chunk_coord = from_world_coord(coord_world).first;
 
             auto chunk_range = make_coord_range<chunk_coord>(
-                {main_chunk_coord.x - range, main_chunk_coord.y - range, main_chunk_coord.z - range}, 
+                {main_chunk_coord.x - range, main_chunk_coord.y - range, main_chunk_coord.z - range},
                 {main_chunk_coord.x + range, main_chunk_coord.y + range, main_chunk_coord.z + range});
 
             std::vector<display_chunk> chunks_in_range;
@@ -227,19 +224,27 @@ namespace voxel_grid {
                 if(display_chunk_search != display_chunk_cache.end()){
                     chunks_in_range.push_back(display_chunk_search->second);
                 } else {
-                    auto data_chunk_search = chunk_data.find(coord);
-                    if(data_chunk_search != chunk_data.end()){
-                        display_chunk fresh_display_chunk;
-                        fresh_display_chunk.cache(coord, data_chunk_search->second);
-                        chunks_in_range.push_back(fresh_display_chunk);
-                        display_chunk_cache.insert({coord, fresh_display_chunk});
-                    }
+                    auto chunk = get_data_chunk(coord);
+                    display_chunk fresh_display_chunk;
+                    fresh_display_chunk.cache(coord, chunk);
+                    chunks_in_range.push_back(fresh_display_chunk);
+                    display_chunk_cache.insert({coord, fresh_display_chunk});
                 } 
             }
             return chunks_in_range;
         }
         private:
-        std::map<chunk_coord, data_chunk> chunk_data;
-        std::map<chunk_coord, display_chunk> display_chunk_cache;
+        data_chunk& get_data_chunk(const chunk_coord& coord) const{
+            auto chunk_search = chunk_data.find(coord);
+            if(chunk_search == chunk_data.end()){
+                data_chunk chunk;
+                chunk.generate(coord);
+                chunk_data.insert({coord, chunk});
+            }
+            return chunk_data[coord];
+        }
+
+        mutable std::map<chunk_coord, data_chunk> chunk_data;
+        mutable std::map<chunk_coord, display_chunk> display_chunk_cache;
     };
 }

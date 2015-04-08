@@ -37,7 +37,7 @@ struct application{
             return true;
         };
 
-        world.generate_world();
+        world.generate_world({0, 0, 0}, 5);
     }
 
     void keyboard_input(float dt){
@@ -114,7 +114,7 @@ struct application{
         std::string current_texture;// = "null";
 
         auto coord = voxel_grid::world_coord::fromGlmVec3(player.position);
-        for(auto chunk : world.get_display_chunks(coord, 1)){
+        for(auto chunk : world.get_display_chunks(coord, 2)){
             for(auto &cube_pair : chunk.renderable_cubes){
                 auto modelMatrix = voxel_grid::cube_template::getModelMatrix(cube_pair.first);
                 gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
