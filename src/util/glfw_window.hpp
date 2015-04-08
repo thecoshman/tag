@@ -2,7 +2,7 @@
 
 namespace util{ 
 struct glfw_window{
-    glfw_window() : size(800,600), title("TAG V3"){
+    glfw_window() : size(800,600), title("TAG V4"){
         if(!glfwInit()){
             throw std::runtime_error("glfwInit failed");
         }
