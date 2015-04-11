@@ -14,7 +14,7 @@ before_install:
 
 install: 
     - sudo apt-get install --force-yes make premake4 g++-4.8
-    - if [ "$CXX" == "g++" ]; then export CXX=g++-4.8; export g++=g++-4.8; fi
+    - if [ "$CXX" == "g++" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; fi
 
 before_script: premake4 gmake
 
