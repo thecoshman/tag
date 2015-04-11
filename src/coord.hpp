@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/glm.hpp>
 
 namespace voxel_grid{
     const int chunk_size = 16;
