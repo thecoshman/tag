@@ -11,7 +11,9 @@ before_install:
   - sudo bash -c "echo 'deb http://lgp203.free.fr/ubuntu quantal universe' >> /etc/apt/sources.list.d/lgp203.free.fr.source.list"
   - sudo apt-get update
 
-install: sudo apt-get install --force-yes make premake4
+install: 
+    - sudo apt-get install --force-yes make premake4 g++-4.8
+    - if [ "$CXX" == "g++" ]; then export CXX=g++-4.8; fi
 
 before_script: premake4 gmake
 
