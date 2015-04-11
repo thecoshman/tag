@@ -1,0 +1,12 @@
+language: cpp
+compiler:
+    - gcc
+    - clang
+
+branches:
+    only:
+        - master
+
+before_script: premake4 gmake
+
+script: make && bin/TAG_TestD
