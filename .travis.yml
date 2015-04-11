@@ -16,6 +16,11 @@ install:
     - sudo apt-get install --force-yes make premake4 g++-4.8
     - if [ "$CXX" == "g++" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; fi
 
-before_script: premake4 gmake
+before_script: 
+    - cd glsdk_0_5_2 ; premake4 gmake ; cd ..
+    - premake4 gmake
 
-script: make && bin/TAG_TestD
+script:
+    - cd glsdk_0_5_2 ; make ; cd ..
+    - make
+    - bin/TAG_TestD
