@@ -8,7 +8,7 @@ branches:
         - master
 
 before_install:
-  - sudo add-apt-repository --yes ppa:pasgui/ppa
+  - sudo bash -c "echo 'deb http://lgp203.free.fr/ubuntu quantal universe' >> /etc/apt/sources.list.d/lgp203.free.fr.source.list"
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test; fi
   - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository --yes ppa:h-rayflood/llvm; fi
   - sudo apt-get update -qq
