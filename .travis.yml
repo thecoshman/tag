@@ -1,7 +1,6 @@
 language: cpp
 compiler:
     - gcc
-    - clang
 
 branches:
     only:
@@ -10,7 +9,6 @@ branches:
 before_install:
   - sudo bash -c "echo 'deb http://lgp203.free.fr/ubuntu quantal universe' >> /etc/apt/sources.list.d/lgp203.free.fr.source.list"
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test; fi
-  - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository --yes ppa:h-rayflood/llvm; fi
   - sudo apt-get update -qq
 
 install: 
@@ -19,14 +17,16 @@ install:
     - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-4.8; fi
     - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; echo "exported g++-4.8"; fi
     - if [ "$CXX" == "g++-4.8" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; echo "set alternatives"; fi
-    - if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi
-    - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; echo "exported clang++-3.4"; fi
-    - if [ "$CXX" == "clang++-3.4" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-3.4 90; echo "set alternatives"; fi
 
 before_script: 
-    - cd glsdk_0_5_2 ; premake4 gmake ; cd ..
+    - cd glsdk_0_5_2
+    - premake4 gmake
+    - cd ..
     - premake4 gmake
 
 script:
-    - cd glsdk_0_5_2 ; make ; cd ..
-    - make && bin/TAG_TestD
+    - cd glsdk_0_5_2
+    - make
+    - cd ..
+    - make 
+    - bin/TAG_TestD
