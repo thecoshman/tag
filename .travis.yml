@@ -21,7 +21,7 @@ install:
     - if [ "$CXX" == "g++-4.8" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; echo "set alternatives"; fi
     - if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi
     - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; echo "exported clang++-3.4"; fi
-    - if [ "$CXX" == "clang++-3.4" ]; then sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.4 90; echo "set alternatives"; fi
+    - if [ "$CXX" == "clang++-3.4" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-3.4 90; echo "set alternatives"; fi
 
 before_script: 
     - cd glsdk_0_5_2 ; premake4 gmake ; cd ..
