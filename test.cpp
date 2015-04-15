@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
-#include "coord.hpp"
+#include "voxel_grid/coord.hpp"
 
 SCENARIO( "coords can converted between forms", "[coord]" ) {
     GIVEN( "default world_coord" ) {

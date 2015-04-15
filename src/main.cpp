@@ -25,7 +25,6 @@
 #include "util/collisionCheckers.hpp"
 #include "util/glfw_window.hpp"
 #include "tag/player.hpp"
-#include "simplex.hpp"
 #include "application.hpp"
 
 void initOGLsettings(){

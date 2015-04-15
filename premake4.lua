@@ -4,13 +4,17 @@ solution "TAG"
     configurations {"Debug", "Release"}
     defines {"_CRT_SECURE_NO_WARNINGS", "_SCL_SECURE_NO_WARNINGS"}
     targetdir "bin"
-    
+
 project "TAG_Test"
     kind "ConsoleApp"
     language "c++"
-    includedirs {"GLDR/src", "catch", "src"}
+    includedirs {"GLDR/src", "catch", "src", "include"}
     files {
+        "src/**.cpp",
         "test.cpp"
+    }
+    excludes {
+        "src/main.cpp"
     }
     
     UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "glfw", "boost"}
@@ -34,12 +38,11 @@ project "TAG_Test"
         buildoptions {"-std=c++11"};
 
 project "TAG"
-    kind "ConsoleApp"
+    kind "WindowedApp"
     language "c++"
-    includedirs {"GLDR/src"}
+    includedirs {"GLDR/src", "include"}
     files {
-        "src/**.cpp",
-        "src/**.h"
+        "src/**.cpp"
     }
     
     UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "glfw", "boost"}
