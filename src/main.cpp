@@ -1,5 +1,6 @@
 #include <map>
 #include <chrono>
+#include <string>
 
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
@@ -23,9 +24,10 @@
 
 #include "util/camera.hpp"
 #include "util/collisionCheckers.hpp"
-#include "util/glfw_window.hpp"
 #include "tag/player.hpp"
 #include "application.hpp"
+
+#include "font.hpp"
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -70,9 +72,18 @@ void initShader(gldr::Program& program){
     );
 
     gldr::VertexShader vertexShader(vertexShaderCode);
+    if(!vertexShader.didCompile()){
+        std::cout << "Cube vertex shader failed to compile\n";
+    }
     gldr::FragmentShader fragmentShader(fragmentShaderCode);
+    if(!fragmentShader.didCompile()){
+        std::cout << "Cube fragment shader failed to compile\n";
+    }
     program.attach(vertexShader, fragmentShader);
     program.link();
+    if(!program.didLink()){
+        std::cout << "Cube program failed to link\n    >" << program.getLog() << "\n";
+    }
 }
 
 void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer& vertexBuffer, gldr::dataVertexBuffer& textureCoordBuffer){
@@ -291,12 +302,18 @@ int main(int argc, char** argv){
     std::cout << "physics_step set to: " << physics_step << std::endl;
     float temporal_accumulator = 0.0;
 
+    font debug_font("consolas");
+    auto frames_drawn = 0;
+    auto fps_display_timer = 0.0f;
+    auto fps_value = 0.0f;
+
     //Main loop
     while(!app.window.exit_requested() && app.run){
         old_time = new_time;
         new_time = clock::now();
         delta_time = new_time - old_time;
         temporal_accumulator += (to_microseconds(delta_time)/1000);
+        fps_display_timer += to_microseconds(delta_time);
 
         while(temporal_accumulator >  physics_step){
             temporal_accumulator -= physics_step;
@@ -304,16 +321,23 @@ int main(int argc, char** argv){
             app.update(physics_step);
         }
 
-        // std::cout << "update time: " << (to_microseconds(clock::now() - new_time)/1000);
-
         if(!glfwGetWindowParam(GLFW_OPENED)){
             app.window.request_exit();
         }
 
         app.cam.pos = app.player.eye_point();
         app.display(cubeShader, cubeVao, textures);
+        ++frames_drawn;
+        if(fps_display_timer > 1000000.0f){
+            fps_value = frames_drawn/fps_display_timer*1000000;
+            frames_drawn = 0;
+            fps_display_timer -= 1000000.0f;
+        }
+        debug_font.draw("fps: " + std::to_string(fps_value), glm::vec2(0.0f,0.0f));
+        debug_font.draw("pos: (" + std::to_string(app.player.position.x) + ", " + std::to_string(app.player.position.y) + ", " + std::to_string(app.player.position.z) + ")", glm::vec2(0.0f, 30.0f));
 
-        // std::cout << " display time: " << (to_microseconds(clock::now() - new_time)/1000) << "\n";
+        glfwSwapBuffers();
     }
+
     return 0;
 }

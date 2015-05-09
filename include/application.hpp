@@ -1,7 +1,11 @@
 #pragma once
 
-#include "voxel_grid.hpp"
 #include <stdexcept>
+
+#include <glm/glm.hpp>
+
+#include "util/glfw_window.hpp"
+#include "voxel_grid.hpp"
 
 
 namespace{
@@ -129,10 +133,12 @@ struct application{
 
         }
 
-        glfwSwapBuffers();
+        // glfwSwapBuffers();
     }
 
-    util::glfw_window window;
+    // util::glfw_window window(glm::ivec2(800,600), "TAG V5");
+    glm::ivec2 window_size = glm::ivec2(800, 600);
+    util::glfw_window window = util::glfw_window(window_size, "TAG V5");
     tag::player player;
     util::Camera cam;
     voxel_grid::chunked_voxel_grid world;
@@ -145,7 +151,6 @@ struct application{
 
     voxel_grid::cube_template cube_creation_template = white_cube_template;
     voxel_grid::cube_template cube_creation_template_tmp{"red_cube"};
-
 
     std::function<void(application&)> on_left_click_fn = [](application&){};
     std::function<void(application&)> on_right_click_fn = [](application&){};

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 namespace util{ 
 struct glfw_window{
-    glfw_window() : size(800,600), title("TAG V4"){
+    glfw_window(const glm::ivec2& size = glm::ivec2(800,600), const std::string& title = "untitled window") : size(size), title(title){
         if(!glfwInit()){
             throw std::runtime_error("glfwInit failed");
         }
