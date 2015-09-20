@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 
 #include "util/glfw_window.hpp"
-#include "voxel_grid.hpp"
+#include "voxel_grid/chunked_voxel_grid.hpp"
+#include "voxel_grid/cube_registry.hpp"
 
 
 namespace{
@@ -25,7 +26,7 @@ namespace{
 }
 
 struct application{
-    application(){
+    application() : world(cube_registry){
         player.position = glm::vec3(0,50,0);
 
         cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
@@ -34,13 +35,13 @@ struct application{
         player.is_space_free_query = [&](util::AABB const& aabb){
             auto potential_hits = get_overlapping_coords(aabb);
             for(auto coord : potential_hits){
-                if(!world.get(coord).is_passable){
+                if(!world.get(coord).is_flag_set(voxel_grid::cube_flags::passable)){
                     return false;
                 }
             }
             return true;
         };
-
+        register_core_cube_types();
         world.generate_world({0, 0, 0}, 5);
     }
 
@@ -66,11 +67,11 @@ struct application{
         }
 
         if(glfwGetKey('1')){
-            cube_creation_template = red_cube_template;
+            block_place_selection = 1;
         } else if(glfwGetKey('2')){
-            cube_creation_template = green_cube_template;
+            block_place_selection = 2;
         } else if(glfwGetKey('3')){
-            cube_creation_template = white_cube_template;
+            block_place_selection = 3;
         }
     }
 
@@ -120,7 +121,7 @@ struct application{
         auto coord = voxel_grid::world_coord::fromGlmVec3(player.position);
         for(auto chunk : world.get_display_chunks(coord, 2)){
             for(auto &cube_pair : chunk.renderable_cubes){
-                auto modelMatrix = voxel_grid::cube_template::getModelMatrix(cube_pair.first);
+                auto modelMatrix = voxel_grid::cube_type::getModelMatrix(cube_pair.first);
                 gl::UniformMatrix4fv(mvpMat, 1, GL_FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
 
                 auto cube = cube_pair.second;
@@ -130,28 +131,29 @@ struct application{
                 }
                 gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
             }
-
         }
-
-        // glfwSwapBuffers();
     }
 
-    // util::glfw_window window(glm::ivec2(800,600), "TAG V5");
+    void register_core_cube_types(){
+        air_type = cube_registry.register_new_type({voxel_grid::cube_flags::invisible | voxel_grid::cube_flags::passable, "air", "empty"});
+        block_place_selection = cube_registry.register_new_type({voxel_grid::cube_flags::fully_blocks_los, "red", "red_cube"});
+        cube_registry.register_new_type({voxel_grid::cube_flags::fully_blocks_los, "white", "white_cube"});
+        cube_registry.register_new_type({voxel_grid::cube_flags::fully_blocks_los, "green", "green_cube"});
+    }
+
     glm::ivec2 window_size = glm::ivec2(800, 600);
-    util::glfw_window window = util::glfw_window(window_size, "TAG V5");
+    util::glfw_window window = util::glfw_window(window_size, "TAG V6");
     tag::player player;
     util::Camera cam;
     voxel_grid::chunked_voxel_grid world;
     bool run = true;
     bool leftMouseDown = false;
     bool rightMouseDown = false;
-    const voxel_grid::cube_template red_cube_template = {"red_cube"};
-    const voxel_grid::cube_template white_cube_template = {"white_cube"};
-    const voxel_grid::cube_template green_cube_template = {"green_cube"};
-
-    voxel_grid::cube_template cube_creation_template = white_cube_template;
-    voxel_grid::cube_template cube_creation_template_tmp{"red_cube"};
 
     std::function<void(application&)> on_left_click_fn = [](application&){};
     std::function<void(application&)> on_right_click_fn = [](application&){};
+
+    voxel_grid::cube_type_registry cube_registry;
+    voxel_grid::cube_type_id air_type;
+    voxel_grid::cube_type_id block_place_selection;
 };

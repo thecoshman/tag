@@ -8,10 +8,6 @@ namespace voxel_grid{
         }
         auto coord_world = to_world_coord(coord_chunk);
 
-        cube_template red_cube_template("red_cube", false);
-        cube_template white_cube_template("white_cube", false);
-        cube_template green_cube_template("green_cube", false);
-
         for(int x = 0; x < chunk_size; x++){
             for(int z = 0; z < chunk_size; z++){
                 // float size = 16;
@@ -32,7 +28,7 @@ namespace voxel_grid{
 
                 for (int y = 0; y < h; ++y) {
                     if(y < 0.5 * chunk_size){
-                        set({ x, y,  z}, white_cube_template);
+                        set({ x, y,  z}, 2);
                     }
                 }
             }

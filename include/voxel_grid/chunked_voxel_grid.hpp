@@ -1,10 +1,11 @@
 #pragma once
 #include <iostream>
 #include "voxel_grid/coord.hpp"
-#include "voxel_grid/cube_template.hpp"
+#include "voxel_grid/cube_type.hpp"
 #include "voxel_grid/data_chunk.hpp"
 #include "voxel_grid/display_chunk.hpp"
 #include "util/collisionCheckers.hpp"
+#include "voxel_grid/cube_registry.hpp"
 
 namespace{
     template <typename T>
@@ -27,6 +28,8 @@ namespace voxel_grid {
     };
 
     struct chunked_voxel_grid{
+        chunked_voxel_grid(const cube_type_registry& cube_registry): cube_registry(cube_registry){ }
+
         void generate_world(const world_coord& coord_world, int range){
             auto main_chunk_coord = from_world_coord(coord_world).first;
 
@@ -39,7 +42,7 @@ namespace voxel_grid {
             }
         }
 
-        const cube_template& get(const world_coord& coord_world) const{
+        const cube_type& get(const world_coord& coord_world) const{
             auto chunk_coord_pair = from_world_coord(coord_world);
             auto chunk = get_data_chunk(chunk_coord_pair.first);
             return chunk.get(chunk_coord_pair.second);
@@ -51,7 +54,7 @@ namespace voxel_grid {
             include_to_end = 4
         };
 
-        std::vector<std::pair<world_coord, cube_template>> trace_ray(const util::Ray& ray, int options = 0){
+        std::vector<std::pair<world_coord, cube_type>> trace_ray(const util::Ray& ray, int options = 0){
             auto starting_coord = world_coord::fromGlmVec3(ray.source);
             auto end_coord = world_coord::fromGlmVec3(ray.source + ray.direction);
             // for each axis, work out which direction (if any) you should increment to move towards the end
@@ -88,7 +91,7 @@ namespace voxel_grid {
                 return collision_info.first;
             };
 
-            std::vector<std::pair<world_coord, cube_template>> selected_blocks;
+            std::vector<std::pair<world_coord, cube_type>> selected_blocks;
 
             for(auto current_coord = starting_coord; current_coord != end_coord; ){
                 auto loop_start = current_coord;
@@ -110,10 +113,10 @@ namespace voxel_grid {
             return selected_blocks;
         }
 
-        void set(const world_coord& coord_world, const cube_template& cube){
+        void set(const world_coord& coord_world, cube_type_id type_id){
             auto chunk_coord_pair = from_world_coord(coord_world);
             auto& chunk = get_data_chunk(chunk_coord_pair.first);
-            chunk.set(chunk_coord_pair.second, cube);
+            chunk.set(chunk_coord_pair.second, type_id);
             display_chunk_cache.erase(chunk_coord_pair.first); // it's no longer valid
         }
 
@@ -143,14 +146,22 @@ namespace voxel_grid {
         data_chunk& get_data_chunk(const chunk_coord& coord) const{
             auto chunk_search = chunk_data.find(coord);
             if(chunk_search == chunk_data.end()){
-                data_chunk chunk;
+                data_chunk chunk(cube_registry);
                 chunk.generate(coord);
                 chunk_data.insert({coord, chunk});
             }
-            return chunk_data[coord];
+            try{
+                return chunk_data.at(coord);
+            }
+            catch (const std::exception &e){
+                std::cout << "oh noes, (" << coord.x << ", " << coord.y << ", " << coord.z << ")" << std::endl;
+                std::cout << e.what() << std::endl;
+                throw e;
+            }
         }
 
         mutable std::map<chunk_coord, data_chunk> chunk_data;
         mutable std::map<chunk_coord, display_chunk> display_chunk_cache;
+        const cube_type_registry& cube_registry;
     };
 }

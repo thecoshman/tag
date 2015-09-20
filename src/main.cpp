@@ -234,7 +234,7 @@ void break_block(application& app){
 
     auto hit_blocks = app.world.trace_ray(ray);
     if(!hit_blocks.empty()){
-        app.world.set(hit_blocks[0].first, voxel_grid::cube_template());
+        app.world.set(hit_blocks[0].first, 0);
     }
 }
 
@@ -247,7 +247,7 @@ void place_block(application& app){
         auto current = hit_blocks[i];
         auto next = hit_blocks[i+1];
         if(current.second.textureName == "empty" && next.second.textureName != "empty"){
-            app.world.set(current.first, app.cube_creation_template);
+            app.world.set(current.first, app.block_place_selection);
             break;
         }
     }
@@ -298,7 +298,7 @@ int main(int argc, char** argv){
     float startup_time = to_microseconds(delta_time);
     std::cout << "app took " << startup_time/1000 << " milliseconds to start." << std::endl;
 
-    const float physics_step = 1000.0f / 30;
+    const float physics_step = 1000.0f / 120;
     std::cout << "physics_step set to: " << physics_step << std::endl;
     float temporal_accumulator = 0.0;
 
@@ -328,11 +328,13 @@ int main(int argc, char** argv){
         app.cam.pos = app.player.eye_point();
         app.display(cubeShader, cubeVao, textures);
         ++frames_drawn;
-        if(fps_display_timer > 1000000.0f){
+
+        if(fps_display_timer > 1000000.0f){ // update the fps display once per second
             fps_value = frames_drawn/fps_display_timer*1000000;
             frames_drawn = 0;
             fps_display_timer -= 1000000.0f;
         }
+
         debug_font.draw("fps: " + std::to_string(fps_value), glm::vec2(0.0f,0.0f));
         debug_font.draw("pos: (" + std::to_string(app.player.position.x) + ", " + std::to_string(app.player.position.y) + ", " + std::to_string(app.player.position.z) + ")", glm::vec2(0.0f, 30.0f));
 
