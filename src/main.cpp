@@ -4,7 +4,7 @@
 
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
-#include <GL/glfw.h>
+#include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -269,9 +269,14 @@ int main(int argc, char** argv){
             gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS_ARB);
             gl::DebugMessageCallbackARB(DebugFunc, (void*)15);
         }
-        glfwSetWindowSizeCallback([](int width, int height){
+        app.window.set_resize_fn([](GLFWwindow* win, int width, int height){
             gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
         });
+
+        glfwSetErrorCallback([](int error, const char* description){
+            std::cout << std::string(description) << std::endl;
+        });
+        glfwSwapInterval(1);
     }
     app.window.centre_mouse();
     
@@ -308,7 +313,7 @@ int main(int argc, char** argv){
     auto fps_value = 0.0f;
 
     //Main loop
-    while(!app.window.exit_requested() && app.run){
+    while(!app.window.should_close() && app.run){
         old_time = new_time;
         new_time = clock::now();
         delta_time = new_time - old_time;
@@ -319,10 +324,6 @@ int main(int argc, char** argv){
             temporal_accumulator -= physics_step;
 
             app.update(physics_step);
-        }
-
-        if(!glfwGetWindowParam(GLFW_OPENED)){
-            app.window.request_exit();
         }
 
         app.cam.pos = app.player.eye_point();
@@ -338,7 +339,8 @@ int main(int argc, char** argv){
         debug_font.draw("fps: " + std::to_string(fps_value), glm::vec2(0.0f,0.0f));
         debug_font.draw("pos: (" + std::to_string(app.player.position.x) + ", " + std::to_string(app.player.position.y) + ", " + std::to_string(app.player.position.z) + ")", glm::vec2(0.0f, 30.0f));
 
-        glfwSwapBuffers();
+        app.window.swap_buffers();
+        glfwPollEvents();
     }
 
     return 0;

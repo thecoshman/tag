@@ -46,31 +46,31 @@ struct application{
     }
 
     void keyboard_input(float dt){
-        if(glfwGetKey('W')){
+        if(window.is_key_down(GLFW_KEY_W)){
             player.move(tag::player::direction::forward);
         }
-        if(glfwGetKey('S')){
+        if(window.is_key_down(GLFW_KEY_S)){
             player.move(tag::player::direction::backward);
         }
-        if(glfwGetKey('A')){
+        if(window.is_key_down(GLFW_KEY_A)){
             player.move(tag::player::direction::left);
         }
-        if(glfwGetKey('D')){
+        if(window.is_key_down(GLFW_KEY_D)){
             player.move(tag::player::direction::right);
         }
-        if(glfwGetKey(' ')){
+        if(window.is_key_down(GLFW_KEY_SPACE)){
             player.jump();
         }
 
-        if(glfwGetKey(GLFW_KEY_ESC)){
+        if(window.is_key_down(GLFW_KEY_ESCAPE)){
             run = false;
         }
 
-        if(glfwGetKey('1')){
+        if(window.is_key_down(GLFW_KEY_1)){
             block_place_selection = 1;
-        } else if(glfwGetKey('2')){
+        } else if(window.is_key_down(GLFW_KEY_2)){
             block_place_selection = 2;
-        } else if(glfwGetKey('3')){
+        } else if(window.is_key_down(GLFW_KEY_3)){
             block_place_selection = 3;
         }
     }
@@ -82,7 +82,7 @@ struct application{
         cam.rotatePitch(-(mouseDelta.y / 10));
         player.view_vector = cam.dir;
 
-        if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT)){
+        if(window.is_mouse_down(GLFW_MOUSE_BUTTON_LEFT)){
             if(!leftMouseDown){
                 leftMouseDown = true;
                 on_left_click_fn(*this);
@@ -91,7 +91,7 @@ struct application{
             leftMouseDown = false;
         }
 
-        if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT)){
+        if(window.is_mouse_down(GLFW_MOUSE_BUTTON_RIGHT)){
             if(!rightMouseDown){
                 rightMouseDown = true;
                 on_right_click_fn(*this);

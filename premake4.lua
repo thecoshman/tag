@@ -17,25 +17,28 @@ project "TAG_Test"
         "src/main.cpp"
     }
     
-    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "glfw", "boost"}
+    libdirs { "/usr/local/lib" }
+    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost"}
 
     configuration "windows"
         defines "WIN32"
         links {"glu32", "opengl32", "gdi32", "winmm", "user32"}
         
     configuration "linux"
-        links {"GL", "GLU", "X11", "Xrandr", "pthread"}
+        links {"GL", "GLU", "X11", "Xinerama", "Xi", "Xxf86vm", "Xcursor", "Xrandr", "pthread"}
         
     configuration "Debug"
         targetsuffix "D"
         defines "_DEBUG"
         flags {"Symbols"}
         buildoptions {"-std=c++11 -Wall"}
+        linkoptions { "-lglfw3"}
 
     configuration "Release"
         defines "NDEBUG"
         flags {"OptimizeSpeed", "NoFramePointer", "ExtraWarnings", "NoEditAndContinue"}
         buildoptions {"-std=c++11"};
+        linkoptions { "-lglfw3"}
 
 project "TAG"
     kind "WindowedApp"
@@ -45,23 +48,26 @@ project "TAG"
         "src/**.cpp"
     }
     
-    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "glfw", "boost"}
+    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost"}
 
     configuration "windows"
         defines "WIN32"
         links {"glu32", "opengl32", "gdi32", "winmm", "user32"}
         
     configuration "linux"
-        links {"GL", "GLU", "X11", "Xrandr", "pthread"}
+        links {"GL", "GLU", "X11", "Xinerama", "Xi", "Xxf86vm", "Xcursor", "Xrandr", "pthread"}
         
     configuration "Debug"
         targetsuffix "D"
         defines "_DEBUG"
         flags {"Symbols"}
         buildoptions {"-std=c++11 -Wall"}
+        linkoptions { "-lglfw3"}
 
     configuration "Release"
         defines "NDEBUG"
         flags {"OptimizeSpeed", "NoFramePointer", "ExtraWarnings", "NoEditAndContinue"}
-        buildoptions {"-std=c++11"};
+        buildoptions {"-std=c++11"}
+        linkoptions { "-lglfw3"}
+
 

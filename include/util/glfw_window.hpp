@@ -1,6 +1,9 @@
 #pragma once
 
 #include <glm/glm.hpp>
+// shut up :'(
+#define GL_TRUE                 1
+#define GL_FALSE                0
 
 namespace util{ 
 struct glfw_window{
@@ -8,43 +11,45 @@ struct glfw_window{
         if(!glfwInit()){
             throw std::runtime_error("glfwInit failed");
         }
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-        glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 3);
-        //glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         #ifdef DEBUG
-        glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
         #endif   
-        auto glfwWindow = glfwOpenWindow(size.x, size.y, 8, 8, 8, 8, 24, 8, GLFW_WINDOW);
-        if(!glfwWindow){
+        win =  glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+        if(!win){
             glfwTerminate();
-            throw std::runtime_error("glfwOpenWindow failed");
+            throw std::runtime_error("glfwCreateWindow failed");
         }
+        glfwMakeContextCurrent(win);
         if(!glload::LoadFunctions()){
             glfwTerminate();
             throw std::runtime_error("glload::LoadFunctions failed");
         }
-
-        glfwSetWindowTitle(title.c_str());
+        glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwMakeContextCurrent(win);
     }
 
     ~glfw_window(){
+        glfwDestroyWindow(win);
         glfwTerminate();
     }
 
-    glm::ivec2 mouse_position(){
-        glfwGetMousePos(&mouse.x, &mouse.y);
-        return glm::ivec2(mouse);
+    glm::dvec2 mouse_position(){
+        glfwGetCursorPos(win, &mouse.x, &mouse.y);
+        return glm::dvec2(mouse);
     }
 
-    glm::ivec2 mouse_delta() const{
-        int x,y;
-        glfwGetMousePos(&x, &y);
-        return glm::ivec2(x - mouse.x, y - mouse.y);   
+    glm::dvec2 mouse_delta() const{
+        double x,y;
+        glfwGetCursorPos(win, &x, &y);
+        return glm::dvec2(x - mouse.x, y - mouse.y);
     }
 
     void centre_mouse(){
         mouse = size/2;
-        glfwSetMousePos(mouse.x, mouse.y);
+        glfwSetCursorPos(win, mouse.x, mouse.y);
     }
 
     void window_resize(int width, int height){
@@ -53,19 +58,36 @@ struct glfw_window{
         gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
     }
 
-    bool exit_requested(){
-        return !run;
+    bool is_key_down(int key){
+        return glfwGetKey(win, key) == GLFW_PRESS;
     }
 
-    void request_exit(){
-        run = false;
+    bool is_mouse_down(int button){
+        return glfwGetMouseButton(win, button) == GLFW_PRESS;
     }
 
+    bool should_close(){
+        return glfwWindowShouldClose(win);
+    };
+
+    void swap_buffers(){
+        glfwSwapBuffers(win);
+    }
+
+    void set_resize_fn(std::function<void(GLFWwindow*, int, int)> fn){
+        typedef void resize_fn(GLFWwindow*,int,int);
+        resize_fn* fn_ptr = fn.target<resize_fn>();
+        if(fn_ptr == nullptr){
+            // bleh
+        } else {
+            glfwSetWindowSizeCallback(win, fn_ptr);
+        }
+    }
     private:
 
+    GLFWwindow* win = nullptr;
     glm::ivec2 size;
     std::string title;
-    glm::ivec2 mouse;
-    bool run = true;
+    glm::dvec2 mouse;
 };
 }

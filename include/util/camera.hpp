@@ -25,18 +25,18 @@ namespace util{
             return glm::cross(dir, up);
         }
 
-        void rotateYaw(float degrees) {
-            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), -degrees, up) * glm::vec4(dir, 0.0f));
+        void rotateYaw(double degrees) {
+            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), -static_cast<float>(degrees), up) * glm::vec4(dir, 0.0f));
         }
 
-        void rotatePitch(float degrees) {
+        void rotatePitch(double degrees) {
             auto right = rightVector();
             // up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, right) * glm::vec4(dir, 0.0f));
-            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, right) * glm::vec4(dir, 0.0f));
+            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), static_cast<float>(degrees), right) * glm::vec4(dir, 0.0f));
         }
 
-        void rotateRoll(float degrees) {
-            up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, dir) * glm::vec4(dir, 0.0f));
+        void rotateRoll(double degrees) {
+            up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), static_cast<float>(degrees), dir) * glm::vec4(dir, 0.0f));
         }
 
         glm::mat4 viewMatrix() const {
