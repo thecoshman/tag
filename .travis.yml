@@ -10,6 +10,11 @@ before_install:
   - sudo bash -c "echo 'deb http://lgp203.free.fr/ubuntu quantal universe' >> /etc/apt/sources.list.d/lgp203.free.fr.source.list"
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test; fi
   - sudo apt-get update -qq
+  - mkdir cmake
+  - cd cmake
+  - wget https://cmake.org/files/v3.3/cmake-3.3.2.tar.gz
+  - tar -xzf cmake-3.3.2.tar.gz
+  - cd ..
   - mkdir glfw
   - cd glfw
   - wget https://github.com/glfw/glfw/archive/3.1.1.tar.gz
@@ -23,6 +28,13 @@ install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; echo "exported g++-4.8"; fi
     - if [ "$CXX" == "g++-4.8" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; echo "set alternatives"; fi
     - sudo apt-get install -qq  cmake libxinerama-dev libxi-dev libxxf86vm-dev libxcursor-dev libxrandr-dev 
+    - cd cmake/cmake-3.3.2
+    - mkdir _build
+    - cd _build
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+    - sudo make install  
+    - sudo ldconfig
+    - cd ../..
     - cd glfw/glfw-3.1.1
     - cmake .
     - sudo make install
