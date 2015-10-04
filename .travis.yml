@@ -10,6 +10,7 @@ before_install:
   - sudo bash -c "echo 'deb http://lgp203.free.fr/ubuntu quantal universe' >> /etc/apt/sources.list.d/lgp203.free.fr.source.list"
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test; fi
   - sudo apt-get update -qq
+  - mkdir glfw
   - cd glfw
   - wget https://github.com/glfw/glfw/archive/3.1.1.tar.gz
   - tar -xzf glfw-3.1.1.tar.gz
