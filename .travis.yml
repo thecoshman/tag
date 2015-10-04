@@ -10,6 +10,9 @@ before_install:
   - sudo bash -c "echo 'deb http://lgp203.free.fr/ubuntu quantal universe' >> /etc/apt/sources.list.d/lgp203.free.fr.source.list"
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test; fi
   - sudo apt-get update -qq
+  - cd glfw
+  - wget https://github.com/glfw/glfw/archive/3.1.1.tar.gz
+  - tar -xzf glfw-3.1.1.tar.gz
 
 install: 
     - sudo apt-get install --allow-unauthenticated -qq make;
@@ -17,8 +20,12 @@ install:
     - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-4.8; fi
     - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; echo "exported g++-4.8"; fi
     - if [ "$CXX" == "g++-4.8" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; echo "set alternatives"; fi
+    - sudo apt-get install -qq  libxinerama-dev libxi-dev libxxf86vm-dev libxcursor-dev libxrandr-dev 
+    - cs glfw
+    - cmake .
+    - sudo make install
 
-before_script: 
+before_script:
     - cd glsdk_0_5_2
     - premake4 gmake
     - cd ..
