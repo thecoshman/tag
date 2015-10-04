@@ -23,10 +23,10 @@ install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; echo "exported g++-4.8"; fi
     - if [ "$CXX" == "g++-4.8" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; echo "set alternatives"; fi
     - sudo apt-get install -qq  libxinerama-dev libxi-dev libxxf86vm-dev libxcursor-dev libxrandr-dev 
-    - cd glfw
+    - cd glfw/glfw-3.1.1
     - cmake .
     - sudo make install
-    - cd ..
+    - cd ../..
 
 before_script:
     - cd glsdk_0_5_2
