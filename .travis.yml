@@ -14,6 +14,7 @@ before_install:
   - cd glfw
   - wget https://github.com/glfw/glfw/archive/3.1.1.tar.gz
   - tar -xzf 3.1.1.tar.gz
+  - cd ..
 
 install: 
     - sudo apt-get install --allow-unauthenticated -qq make;
@@ -25,6 +26,7 @@ install:
     - cd glfw
     - cmake .
     - sudo make install
+    - cd ..
 
 before_script:
     - cd glsdk_0_5_2
