@@ -14,6 +14,7 @@ struct glfw_window{
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_SRGB_CAPABLE, true);
         #ifdef DEBUG
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, gl::TRUE);
         #endif   
@@ -29,6 +30,7 @@ struct glfw_window{
         }
         glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         glfwMakeContextCurrent(win);
+        gl::Enable(gl::FRAMEBUFFER_SRGB);
     }
 
     ~glfw_window(){

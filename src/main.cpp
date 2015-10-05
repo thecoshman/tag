@@ -190,7 +190,7 @@ gldr::Texture2d loadTexture(const std::string& file){
 
     texture.imageData(dim.width, dim.height,
         gldr::textureOptions::Format::RGBA,
-        gldr::textureOptions::InternalFormat::RGB,
+        gldr::textureOptions::InternalFormat::SRGB,
         gldr::textureOptions::DataType::UnsignedByte,
         image.GetImageData()
     );
