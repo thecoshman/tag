@@ -1,6 +1,7 @@
 #include <map>
 #include <chrono>
 #include <string>
+#include <set>
 
 #include <glload/gl_3_3.hpp>
 #include <glload/gl_load.hpp>
@@ -24,6 +25,7 @@
 
 #include "util/camera.hpp"
 #include "util/collisionCheckers.hpp"
+#include "util/skyBox.hpp"
 #include "tag/player.hpp"
 #include "application.hpp"
 
@@ -185,8 +187,10 @@ gldr::Texture2d loadTexture(const std::string& file){
     // size_t  pixelSize = image.GetImageByteSize();
 
     gldr::Texture2d texture;
-    texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Linear);
-    texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Linear);
+    // texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Linear);
+    // texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Linear);
+    texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Nearest);
+    texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Nearest);
 
     texture.imageData(dim.width, dim.height,
         gldr::textureOptions::Format::RGBA,
@@ -285,6 +289,14 @@ int main(int argc, char** argv){
     textures.insert(std::make_pair("green_cube", loadTexture("resource/texture/green_cube.png")));
     textures.insert(std::make_pair("white_cube", loadTexture("resource/texture/white_cube.png")));
 
+    auto skybox = util::sky_box{{
+        {gldr::textureOptions::CubeMapFace::PositiveX, "resource/texture/sky_box_E.png"},
+        {gldr::textureOptions::CubeMapFace::NegativeX, "resource/texture/sky_box_W.png"},
+        {gldr::textureOptions::CubeMapFace::PositiveY, "resource/texture/sky_box_U.png"},
+        {gldr::textureOptions::CubeMapFace::NegativeY, "resource/texture/sky_box_D.png"},
+        {gldr::textureOptions::CubeMapFace::PositiveZ, "resource/texture/sky_box_N.png"},
+        {gldr::textureOptions::CubeMapFace::NegativeZ, "resource/texture/sky_box_S.png"}}};
+
     gldr::VertexArray cubeVao;
     gldr::Program cubeShader;
     gldr::indexVertexBuffer indexBuffer;
@@ -327,6 +339,7 @@ int main(int argc, char** argv){
         }
 
         app.cam.pos = app.player.eye_point();
+        skybox.render(app.cam);
         app.display(cubeShader, cubeVao, textures);
         ++frames_drawn;
 
