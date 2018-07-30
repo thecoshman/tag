@@ -24,9 +24,9 @@ before_install:
 install: 
     - sudo apt-get install --allow-unauthenticated -qq make;
     - sudo apt-get install --allow-unauthenticated -qq premake4;
-    - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-4.8; fi
-    - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; echo "exported g++-4.8"; fi
-    - if [ "$CXX" == "g++-4.8" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90; echo "set alternatives"; fi
+    - if [ "$CXX" == "g++" ]; then sudo apt-get install -qq g++-8.2; fi
+    - if [ "$CXX" == "g++" ]; then export CXX="g++-8.2"; echo "exported g++-8.2"; fi
+    - if [ "$CXX" == "g++-8.2" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8.2 90; echo "set alternatives"; fi
     - sudo apt-get install -qq  libxinerama-dev libxi-dev libxxf86vm-dev libxcursor-dev libxrandr-dev 
     - cd cmake/cmake-3.3.2
     - mkdir _build
