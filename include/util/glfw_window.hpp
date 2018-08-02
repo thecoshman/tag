@@ -76,15 +76,15 @@ struct glfw_window{
         glfwSwapBuffers(win);
     }
 
-    void set_resize_fn(std::function<void(GLFWwindow*, int, int)> fn){
-        typedef void resize_fn(GLFWwindow*,int,int);
-        resize_fn* fn_ptr = fn.target<resize_fn>();
-        if(fn_ptr == nullptr){
-            // bleh
-        } else {
-            glfwSetWindowSizeCallback(win, fn_ptr);
-        }
-    }
+    // void set_resize_fn(std::function<void(GLFWwindow*, int, int)> fn){
+    //     typedef void resize_fn(GLFWwindow*,int,int);
+    //     resize_fn* fn_ptr = fn.target<resize_fn>();
+    //     if(fn_ptr == nullptr){
+    //         // bleh
+    //     } else {
+    //         glfwSetWindowSizeCallback(win, fn_ptr);
+    //     }
+    // }
     private:
 
     GLFWwindow* win = nullptr;

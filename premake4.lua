@@ -18,7 +18,7 @@ project "TAG_Test"
     }
     
     libdirs { "/usr/local/lib" }
-    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost"}
+    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost", "glfw"}
 
     configuration "windows"
         defines "WIN32"
@@ -32,13 +32,11 @@ project "TAG_Test"
         defines "_DEBUG"
         flags {"Symbols"}
         buildoptions {"-std=c++11 -Wall"}
-        linkoptions { "-lglfw3"}
 
     configuration "Release"
         defines "NDEBUG"
         flags {"OptimizeSpeed", "NoFramePointer", "ExtraWarnings", "NoEditAndContinue"}
-        buildoptions {"-std=c++11"};
-        linkoptions { "-lglfw3"}
+        buildoptions {"-std=c++11"}
 
 project "TAG"
     kind "WindowedApp"
@@ -48,6 +46,7 @@ project "TAG"
         "src/**.cpp"
     }
     
+    libdirs { "/usr/local/lib" }
     UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost"}
 
     configuration "windows"
@@ -55,19 +54,17 @@ project "TAG"
         links {"glu32", "opengl32", "gdi32", "winmm", "user32"}
         
     configuration "linux"
-        links {"GL", "GLU", "X11", "Xinerama", "Xi", "Xxf86vm", "Xcursor", "Xrandr", "pthread"}
+        links {"GL", "GLU", "X11", "Xinerama", "Xi", "Xxf86vm", "Xcursor", "Xrandr", "pthread", "glfw"}
         
     configuration "Debug"
         targetsuffix "D"
         defines "_DEBUG"
         flags {"Symbols"}
         buildoptions {"-std=c++11 -Wall"}
-        linkoptions { "-lglfw3"}
 
     configuration "Release"
         defines "NDEBUG"
         flags {"OptimizeSpeed", "NoFramePointer", "ExtraWarnings", "NoEditAndContinue"}
         buildoptions {"-std=c++11"}
-        linkoptions { "-lglfw3"}
 
 

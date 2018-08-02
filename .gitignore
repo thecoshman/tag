@@ -32,3 +32,8 @@ TAG*
 #Makefiles
 Makefile
 *.make
+
+glsdk_0_5_2/freeglut/config.log
+glsdk_0_5_2/freeglut/config.status
+glsdk_0_5_2/freeglut/libtool
+

@@ -273,9 +273,9 @@ int main(int argc, char** argv){
             gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS_ARB);
             gl::DebugMessageCallbackARB(DebugFunc, (void*)15);
         }
-        app.window.set_resize_fn([](GLFWwindow* win, int width, int height){
-            gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
-        });
+        // app.window.set_resize_fn([](GLFWwindow* win, int width, int height){
+        //     gl::Viewport(0, 0, (GLsizei) width, (GLsizei) height);
+        // });
 
         glfwSetErrorCallback([](int error, const char* description){
             std::cout << std::string(description) << std::endl;

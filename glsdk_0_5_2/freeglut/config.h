@@ -68,7 +68,7 @@
 #define HAVE_X11_EXTENSIONS_XF86VMODE_H 1
 
 /* Define to 1 if you have the <X11/extensions/XInput.h> header file. */
-/* #undef HAVE_X11_EXTENSIONS_XINPUT_H */
+#define HAVE_X11_EXTENSIONS_XINPUT_H 1
 
 /* Define to 1 if you have the <X11/extensions/XI.h> header file. */
 #define HAVE_X11_EXTENSIONS_XI_H 1
