@@ -33,6 +33,7 @@
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    gl::Enable(gl::TEXTURE_CUBE_MAP);
     gl::Enable(gl::DEPTH_TEST);
     gl::DepthFunc(gl::LEQUAL);
     gl::Enable(gl::CULL_FACE);
@@ -282,6 +283,8 @@ int main(int argc, char** argv){
         });
         glfwSwapInterval(1);
     }
+    initOGLsettings();
+
     app.window.centre_mouse();
     
     std::map<std::string, gldr::Texture2d> textures;
@@ -302,7 +305,6 @@ int main(int argc, char** argv){
     gldr::indexVertexBuffer indexBuffer;
     gldr::dataVertexBuffer vertexBuffer;
     gldr::dataVertexBuffer textureCoordBuffer;
-    initOGLsettings();
     initShader(cubeShader);
     cubeVao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
@@ -326,6 +328,8 @@ int main(int argc, char** argv){
 
     //Main loop
     while(!app.window.should_close() && app.run){
+        gl::Clear(gl::COLOR_BUFFER_BIT);
+        gl::Clear(gl::DEPTH_BUFFER_BIT);
         old_time = new_time;
         new_time = clock::now();
         delta_time = new_time - old_time;
@@ -334,13 +338,12 @@ int main(int argc, char** argv){
 
         while(temporal_accumulator >  physics_step){
             temporal_accumulator -= physics_step;
-
             app.update(physics_step);
         }
 
         app.cam.pos = app.player.eye_point();
-        skybox.render(app.cam);
         app.display(cubeShader, cubeVao, textures);
+        skybox.render(app.cam);
         ++frames_drawn;
 
         if(fps_display_timer > 1000000.0f){ // update the fps display once per second

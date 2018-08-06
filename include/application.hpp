@@ -108,8 +108,7 @@ struct application{
     }
 
     void display(const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures){
-        gl::Clear(gl::COLOR_BUFFER_BIT);
-        gl::Clear(gl::DEPTH_BUFFER_BIT);
+
 
         vao.bind();
         program.use();

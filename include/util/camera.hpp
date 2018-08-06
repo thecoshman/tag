@@ -43,7 +43,7 @@ namespace util{
             return glm::lookAt(pos, pos + dir, up);
         }
 
-        glm::mat4 mvpMatric(const glm::mat4 modelMatrix) const {
+        glm::mat4 mvpMatrix(const glm::mat4 modelMatrix) const {
             return projectionMatrix() * viewMatrix() * modelMatrix;
         }
 
