@@ -108,8 +108,6 @@ struct application{
     }
 
     void display(const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures){
-
-
         vao.bind();
         program.use();
         GLint mvpMat = program.getUniformLocation("mvpMat");

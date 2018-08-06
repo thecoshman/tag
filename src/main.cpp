@@ -295,8 +295,8 @@ int main(int argc, char** argv){
     auto skybox = util::sky_box{{
         {gldr::textureOptions::CubeMapFace::PositiveX, "resource/texture/sky_box_E.png"},
         {gldr::textureOptions::CubeMapFace::NegativeX, "resource/texture/sky_box_W.png"},
-        {gldr::textureOptions::CubeMapFace::PositiveY, "resource/texture/sky_box_U.png"},
-        {gldr::textureOptions::CubeMapFace::NegativeY, "resource/texture/sky_box_D.png"},
+        {gldr::textureOptions::CubeMapFace::PositiveY, "resource/texture/sky_box_D.png"},
+        {gldr::textureOptions::CubeMapFace::NegativeY, "resource/texture/sky_box_U.png"},
         {gldr::textureOptions::CubeMapFace::PositiveZ, "resource/texture/sky_box_N.png"},
         {gldr::textureOptions::CubeMapFace::NegativeZ, "resource/texture/sky_box_S.png"}}};
 

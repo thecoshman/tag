@@ -17,9 +17,11 @@ namespace util{
             texture.bind();
             program.use();
 
-            auto matrix = cam.mvpMatrix(glm::scale(glm::mat4(1.0f), glm::vec3(50,50,50)));
-            gl::UniformMatrix4fv(pvm_uniform, 1, GL_FALSE, glm::value_ptr(matrix));
-            gl::DrawElements(gl::QUADS, 6, gl::UNSIGNED_INT, 0);
+            auto projection = cam.projectionMatrix();
+            auto view = glm::lookAt(glm::vec3(0,0,0), cam.dir, cam.up);
+            auto model = glm::scale(glm::mat4(1.0f), glm::vec3(100,-100,100));
+            gl::UniformMatrix4fv(pvm_uniform, 1, GL_FALSE, glm::value_ptr(projection * view * model));
+            gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
         }
 
         private:
@@ -67,7 +69,7 @@ namespace util{
                 "\n"
                 "void main() {\n"
                 "    gl_Position = PVM * vec4(vertex, 1.0);\n"
-                "    texCoord = vertex;\n"
+                "    texCoord = vec3(-vertex.x, vertex.y, vertex.z);\n"
                 "}\n"});
             if(!vertex_shader.didCompile()){
                 std::cout << "sky box vertex shader failed to compile\n    >" << vertex_shader.getLog() << "\n";
@@ -100,22 +102,49 @@ namespace util{
         void init_vertex_data(){
             vao.bind();
             vertex_buffer.bufferData(std::vector<GLfloat>{
-              -1.0,  1.0,  1.0,
-              -1.0, -1.0,  1.0,
-               1.0, -1.0,  1.0,
-               1.0,  1.0,  1.0,
-              -1.0,  1.0, -1.0,
-              -1.0, -1.0, -1.0,
-               1.0, -1.0, -1.0,
-               1.0,  1.0, -1.0,
+                -1.0, -1.0, -1.0,
+                -1.0, -1.0,  1.0,
+                -1.0,  1.0,  1.0,
+                -1.0,  1.0, -1.0,
+
+                -1.0, -1.0,  1.0,
+                 1.0, -1.0,  1.0,
+                 1.0,  1.0,  1.0,
+                -1.0,  1.0,  1.0,
+
+                 1.0, -1.0,  1.0,
+                 1.0, -1.0, -1.0,
+                 1.0,  1.0, -1.0,
+                 1.0,  1.0,  1.0,
+
+                 1.0, -1.0, -1.0,
+                -1.0, -1.0, -1.0,
+                -1.0,  1.0, -1.0,
+                 1.0,  1.0, -1.0,
+
+                -1.0,  1.0, -1.0,
+                -1.0,  1.0,  1.0,
+                 1.0,  1.0,  1.0,
+                 1.0,  1.0, -1.0,
+
+                -1.0, -1.0,  1.0,
+                -1.0, -1.0, -1.0,
+                 1.0, -1.0, -1.0,
+                 1.0, -1.0,  1.0,
             });
             index_buffer.bufferData(std::vector<GLuint>{
-              0, 1, 2, 3,
-              3, 2, 6, 7,
-              7, 6, 5, 4,
-              4, 5, 1, 0,
-              0, 3, 7, 4,
-              1, 2, 6, 5,
+                 0, 1,   2,
+                 2, 3,   0,
+                 4, 5,   6,
+                 6, 7,   4,
+                 8, 9,  10,
+                10, 11,  8,
+                12, 13, 14,
+                14, 15, 12,
+                16, 17, 18,
+                18, 19, 16,
+                20, 21, 22,
+                22, 23, 20,
             });
             gl::EnableVertexAttribArray(vertex_atrib_location);
             gl::VertexAttribPointer(vertex_atrib_location, 3, gl::FLOAT, GL_FALSE, 0, 0);
