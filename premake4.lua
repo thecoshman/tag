@@ -31,12 +31,12 @@ project "TAG_Test"
         targetsuffix "D"
         defines "_DEBUG"
         flags {"Symbols"}
-        buildoptions {"-std=c++11 -Wall"}
+        buildoptions {"-std=c++17 -Wall"}
 
     configuration "Release"
         defines "NDEBUG"
         flags {"OptimizeSpeed", "NoFramePointer", "ExtraWarnings", "NoEditAndContinue"}
-        buildoptions {"-std=c++11"}
+        buildoptions {"-std=c++17"}
 
 project "TAG"
     kind "WindowedApp"
@@ -60,11 +60,11 @@ project "TAG"
         targetsuffix "D"
         defines "_DEBUG"
         flags {"Symbols"}
-        buildoptions {"-std=c++11 -Wall"}
+        buildoptions {"-std=c++17 -Wall"}
 
     configuration "Release"
         defines "NDEBUG"
         flags {"OptimizeSpeed", "NoFramePointer", "ExtraWarnings", "NoEditAndContinue"}
-        buildoptions {"-std=c++11"}
+        buildoptions {"-std=c++17"}
 
 

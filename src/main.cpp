@@ -14,10 +14,6 @@
 
 #include <glimg/glimg.h>
 
-// shut up :'(
-#define GL_TRUE                 1
-#define GL_FALSE                0
-
 #include "program.hpp"
 #include "vertexArray.hpp"
 #include "vertexBuffer.hpp"

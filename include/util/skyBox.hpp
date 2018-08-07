@@ -4,6 +4,10 @@
 #include "textureCube.hpp"
 #include "camera.hpp"
 
+namespace {
+    const GLint GL_FALSE = 0;
+}
+
 namespace util{
     struct sky_box{
         sky_box(std::set<std::pair<gldr::textureOptions::CubeMapFace, const std::string>> files){
