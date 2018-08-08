@@ -17,15 +17,15 @@ project "TAG_Test"
         "src/main.cpp"
     }
     
-    libdirs { "/usr/local/lib" }
-    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost", "glfw"}
+    libdirs { "/usr/lib/x86_64-linux-gnu", "/usr/local/lib" }
+    UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost"}
 
     configuration "windows"
         defines "WIN32"
         links {"glu32", "opengl32", "gdi32", "winmm", "user32"}
         
     configuration "linux"
-        links {"GL", "GLU", "X11", "Xinerama", "Xi", "Xxf86vm", "Xcursor", "Xrandr", "pthread"}
+        links {"GL", "GLU", "X11", "Xinerama", "Xi", "Xxf86vm", "Xcursor", "Xrandr", "pthread", "glfw"}
         
     configuration "Debug"
         targetsuffix "D"
@@ -46,7 +46,7 @@ project "TAG"
         "src/**.cpp"
     }
     
-    libdirs { "/usr/local/lib" }
+    libdirs { "/usr/lib/x86_64-linux-gnu", "/usr/local/lib" }
     UseLibs {"glload", "glimage", "glutil", "glmesh", "glm", "freeglut", "boost"}
 
     configuration "windows"

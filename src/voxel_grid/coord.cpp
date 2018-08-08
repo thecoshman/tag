@@ -1,7 +1,6 @@
 #include "voxel_grid/coord.hpp"
 
-namespace voxel_grid{
-    
+namespace voxel_grid{    
     template <typename tag>
     std::ostream& operator<<(std::ostream& os, const coord<tag>& coord){
       os << "(" << coord.x << ", " << coord.y << ", " << coord.z << ")";

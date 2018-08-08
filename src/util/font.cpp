@@ -1,11 +1,4 @@
-#pragma once
-
-#include <glimg/glimg.h>
-#include "pugixml.hpp"
-#include "program.hpp"
-#include "vertexArray.hpp"
-#include "vertexBuffer.hpp"
-#include "texture.hpp"
+#include "util/font.hpp"
 
 namespace {
     gldr::Texture2d load_texture(const std::string& file){
@@ -27,91 +20,21 @@ namespace {
     }
 }
 
-class font{
-    class font_descriptor{
-        struct char_descriptor{
-            int id,
-                x, y,
-                width, height,
-                xOffset, yOffset,
-                xAdvance,
-                num;
 
-            bool operator< (char_descriptor const& other){
-                return id < other.id;
-            }
-        };
+    std::string font::texture_file_path(){
+        return font_folder + font_name + texture_extension;
+    }
 
-        std::map<int, char_descriptor> data_map;
-        int xSize, ySize;
+    std::string font::config_file_path(){
+        return font_folder + font_name + config_extension;
+    }
 
-        int read(const pugi::xml_node& node, const std::string& attribute_name){
-            return node.attribute(attribute_name.c_str()).as_int();
-        }
-
-        public:
-        void load(const std::string& config_file_path) {
-            pugi::xml_document doc;
-            if (doc.load_file(config_file_path.c_str()).status != pugi::status_ok){
-                throw std::runtime_error("File opening failed");
-            }
-
-            auto root_node = doc.first_child();
-
-            xSize = read(root_node.child("common"), "scaleW");
-            ySize = read(root_node.child("common"), "scaleH");
-
-            int num = 0;
-            for (auto char_node = root_node.child("chars").first_child(); char_node; char_node = char_node.next_sibling()){
-                char_descriptor cd;
-
-                cd.id = read(char_node, "id");
-
-                cd.x = read(char_node, "x");
-                cd.y = read(char_node, "y");
-
-                cd.width = read(char_node, "width");
-                cd.height = read(char_node, "height");
-
-                cd.xOffset = read(char_node, "xoffset");
-                cd.yOffset = read(char_node, "yoffset");
-
-                cd.xAdvance = read(char_node, "xadvance");
-
-                cd.num = num++;
-
-                data_map.insert(std::make_pair(cd.id, cd));
-            }
-        }
-
-        std::map<int, char_descriptor> const& data() const { return data_map; }
-        int get_xsize() const { return xSize; }
-        int get_ysize() const { return ySize; }
-        font_descriptor(){}
-    };
-
-    gldr::dataVertexBuffer vbo;
-    gldr::VertexArray vao;
-    gldr::Program program;
-    gldr::Texture2d texture;
-
-    font_descriptor fd;
-
-    std::string font_folder = "resource/fonts/";
-    std::string texture_extension = ".png";
-    std::string config_extension = ".xml";
-    std::string font_name;
-
-    std::string texture_file_path(){ return font_folder + font_name + texture_extension; }
-
-    std::string config_file_path(){ return font_folder + font_name + config_extension; }
-
-    void render_glyph(int glyph, glm::vec2 const& position){
+    void font::render_glyph(int glyph, glm::vec2 const& position){
         program.setUniform("Position", position);
         gl::DrawArrays(gl::TRIANGLE_STRIP, glyph, 4);
     }
 
-    void init_shaders(){
+    void font::init_shaders(){
         std::string vert = 
             "#version 330 core\n"
             "\n"
@@ -180,7 +103,7 @@ class font{
         program.setTexture("tex", 0);
     }
 
-    void load(){
+    void font::load(){
         texture = load_texture(texture_file_path());
         fd.load(config_file_path());
 
@@ -209,16 +132,16 @@ class font{
         vbo.bind();
 
         gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer(0, 2, gl::FLOAT, GL_FALSE, sizeof(glm::vec2) * 2, nullptr);
+        gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, sizeof(glm::vec2) * 2, nullptr);
         gl::EnableVertexAttribArray(1);
-        gl::VertexAttribPointer(1, 2, gl::FLOAT, GL_FALSE, sizeof(glm::vec2) * 2, (void*)(sizeof(glm::vec2)));
+        gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, sizeof(glm::vec2) * 2, (void*)(sizeof(glm::vec2)));
 
         vbo.bufferData(vboData);
 
         init_shaders();
     }
 
-    void pre_draw(){
+    void font::pre_draw(){
         gl::Disable(gl::DEPTH_TEST);
         gl::Disable(gl::CULL_FACE);
         gl::Enable (gl::BLEND);
@@ -233,14 +156,13 @@ class font{
         texture.bind(0);
     }
 
-    void post_draw(){
+    void font::post_draw(){
         gl::Enable(gl::DEPTH_TEST);
         gl::Enable(gl::CULL_FACE);
         gl::Disable (gl::BLEND);
     }
 
-    public:
-    void draw (std::string const& text, glm::vec2 position){
+    void font::draw (std::string const& text, glm::vec2 position){
         pre_draw();
 
         for (auto c : text){
@@ -256,5 +178,6 @@ class font{
         post_draw();
     }
 
-    font(std::string name): font_name(name){ load(); }
-};
+    font::font(std::string name): font_name(name){
+        load();
+    }

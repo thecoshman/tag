@@ -4,64 +4,29 @@
 
 namespace util{
     struct Camera{
-        Camera(): 
-            pos(0.0,0.0,0.0),
-            dir(0.0,0.0,-1.0),
-            up(0.0,1.0,0.0),
-            aspectRatio(4.0f / 3.0f),
-            fov(45.0f), near(0.1f), far(999.0f){}
+        Camera();
 
-        glm::mat4 projectionMatrix() const{
-            return glm::perspective(fov, aspectRatio, near, far); 
-        }
+        glm::mat4 projectionMatrix() const;
 
-        void translate(const glm::vec3& translation){
-            pos += translation;
-        }
+        void translate(const glm::vec3& translation);
 
-        glm::vec3 rightVector() const {
-            glm::normalize(dir);
-            glm::normalize(up);
-            return glm::cross(dir, up);
-        }
+        glm::vec3 rightVector() const ;
 
-        void rotateYaw(double degrees) {
-            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), -static_cast<float>(degrees), up) * glm::vec4(dir, 0.0f));
-        }
+        void rotateYaw(double degrees);
 
-        void rotatePitch(double degrees) {
-            auto right = rightVector();
-            // up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), degrees, right) * glm::vec4(dir, 0.0f));
-            dir = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), static_cast<float>(degrees), right) * glm::vec4(dir, 0.0f));
-        }
+        void rotatePitch(double degrees);
 
-        void rotateRoll(double degrees) {
-            up = glm::swizzle<glm::X, glm::Y, glm::Z>(glm::rotate(glm::mat4(1.0f), static_cast<float>(degrees), dir) * glm::vec4(dir, 0.0f));
-        }
+        void rotateRoll(double degrees);
 
-        glm::mat4 viewMatrix() const {
-            return glm::lookAt(pos, pos + dir, up);
-        }
+        glm::mat4 viewMatrix() const;
 
-        glm::mat4 mvpMatrix(const glm::mat4 modelMatrix) const {
-            return projectionMatrix() * viewMatrix() * modelMatrix;
-        }
+        glm::mat4 mvpMatrix(const glm::mat4 modelMatrix) const;
 
-        void forward(float distance) {
-            glm::normalize(dir);
-            pos += dir * distance;
-        }
+        void forward(float distance);
 
-        void strafe(float distance) {
-            auto right = rightVector();
-            pos += right * distance;
-        }
+        void strafe(float distance);
 
-        void pan(glm::vec2 panning){
-            auto right = rightVector();
-            pos += right * -panning.x;
-            pos += up * panning.y;
-        }
+        void pan(const glm::vec2& panning);
 
         glm::vec3 pos, dir, up;
         float aspectRatio, fov, near, far;

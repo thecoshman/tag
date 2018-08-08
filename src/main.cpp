@@ -1,31 +1,8 @@
-#include <map>
 #include <chrono>
-#include <string>
-#include <set>
 
-#include <glload/gl_3_3.hpp>
-#include <glload/gl_load.hpp>
-#include <GLFW/glfw3.h>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/swizzle.hpp>
-
-#include <glimg/glimg.h>
-
-#include "program.hpp"
-#include "vertexArray.hpp"
-#include "vertexBuffer.hpp"
-#include "texture.hpp"
-
-#include "util/camera.hpp"
-#include "util/collisionCheckers.hpp"
 #include "util/skyBox.hpp"
-#include "tag/player.hpp"
-#include "application.hpp"
-
-#include "font.hpp"
+#include "tag/application.hpp"
+#include "util/font.hpp"
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -169,10 +146,10 @@ void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer
 
     vertexBuffer.bufferData(vertexPositions);
     gl::EnableVertexAttribArray(0);
-    gl::VertexAttribPointer(0, 3, gl::FLOAT, GL_FALSE, 0, 0);
+    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 0, 0);
     textureCoordBuffer.bufferData(textureCoord);
     gl::EnableVertexAttribArray(1);
-    gl::VertexAttribPointer(1, 2, gl::FLOAT, GL_FALSE, 0, 0);
+    gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 0, 0);
 }
 
 gldr::Texture2d loadTexture(const std::string& file){

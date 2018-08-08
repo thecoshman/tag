@@ -169,28 +169,28 @@ namespace{
 }
 
 namespace util{
-float simplex_noise(int octaves, float x, float y, float z){
-    float value = 0.0;
-    int i;
-    for(i=0; i<octaves; i++){
-        value += noise3d(
-            x*pow(2, i),
-            y*pow(2, i),
-            z*pow(2, i)
-        );
+    float simplex_noise(int octaves, float x, float y, float z){
+        float value = 0.0;
+        int i;
+        for(i=0; i<octaves; i++){
+            value += noise3d(
+                x*pow(2, i),
+                y*pow(2, i),
+                z*pow(2, i)
+            );
+        }
+        return value;
     }
-    return value;
-}
 
-float simplex_noise(int octaves, float x, float y){
-    float value = 0.0;
-    int i;
-    for(i=0; i<octaves; i++){
-        value += noise2d(
-            x*pow(2, i),
-            y*pow(2, i)
-        );
+    float simplex_noise(int octaves, float x, float y){
+        float value = 0.0;
+        int i;
+        for(i=0; i<octaves; i++){
+            value += noise2d(
+                x*pow(2, i),
+                y*pow(2, i)
+            );
+        }
+        return value;
     }
-    return value;
-}
 }
