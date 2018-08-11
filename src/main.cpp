@@ -156,13 +156,8 @@ gldr::Texture2d loadTexture(const std::string& file){
     std::unique_ptr<glimg::ImageSet> imageSet(glimg::loaders::stb::LoadFromFile(file));
     auto image = imageSet->GetImage(0);
     auto dim = image.GetDimensions();
-    // auto format = image.GetFormat();
-    // const void* dataPtr = image.GetImageData();
-    // size_t  pixelSize = image.GetImageByteSize();
 
     gldr::Texture2d texture;
-    // texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Linear);
-    // texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Linear);
     texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Nearest);
     texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Nearest);
 
@@ -203,10 +198,11 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
         case gl::DEBUG_SEVERITY_LOW_ARB: typeSeverity = "Low"; break;
     }
 
-    printf("%s from %s,\t%s priority\nMessage: %s\n", errorType.c_str(), srcName.c_str(), typeSeverity.c_str(), message);
+    std::cout << errorType << " from " << srcName << ",\t" << typeSeverity << "priority\n";
+    std::cout << "Message: " << message << "\n";
 }
 
-void break_block(application& app){
+void break_block(tag::application& app){
     glm::vec3 rayDirection = glm::normalize(app.cam.dir);
     util::Ray ray{app.cam.pos, rayDirection * 5.0f};
 
@@ -216,7 +212,7 @@ void break_block(application& app){
     }
 }
 
-void place_block(application& app){
+void place_block(tag::application& app){
     glm::vec3 rayDirection = glm::normalize(app.cam.dir);
     util::Ray ray{app.cam.pos, rayDirection * 5.0f};
     
@@ -240,7 +236,7 @@ int main(int argc, char** argv){
     using clock = std::chrono::high_resolution_clock;
     auto old_time = clock::now();
 
-    application app;
+    tag::application app;
     {
         // glfw's C api makes it too awkard to move this stuff
         if(gl::exts::var_ARB_debug_output){
