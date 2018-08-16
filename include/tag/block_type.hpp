@@ -8,9 +8,13 @@ namespace tag {
     struct game_world;
 
     enum block_type_flag : unsigned int {
-        can_be_replaced = (1 <<  0),
-        falls           = (1 <<  1),
-        is_solid_block  = (1 <<  2)
+        none             = 1 <<  0,
+        can_be_replaced  = 1 <<  1,
+        gravity          = 1 <<  2,
+        is_solid_block   = 1 <<  3,
+        passable         = 1 <<  4,
+        fully_blocks_los = 1 <<  5,
+        invisible        = 1 <<  6,
     };
 
     struct null_render_type{

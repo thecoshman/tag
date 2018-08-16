@@ -1,36 +1,25 @@
 #include "tag/game_world.hpp"
 
 namespace tag {
-    game_world::game_world() {
-        for(auto&& name : {
-            "core::air",
-            "core::stone",
-            "core::dirt",
-            "core::grass"}) {
-            block_registry.register_name(name);
+    game_world::game_world(registry_block_type block_registry): block_registry(block_registry){
+    }
+
+    void game_world::update(float dt){
+
+    }
+
+    int game_world::add_dimenion(voxel_grid::chunk_generator generator){
+        dimensions.emplace_back(generator);
+        return dimensions.size();
+    }
+
+    std::vector<voxel_grid::new_display_chunk> game_world::get_display_chunks(unsigned int dimensionID, const voxel_grid::world_coord& coord_world, int range) const {
+        if(dimensionID > dimensions.size()) {
+            return std::vector<voxel_grid::new_display_chunk>();
         }
-        {
-            auto type = tag::block_type{"core", "air"};
-            type.set_flag(block_type_flag::can_be_replaced);
-            block_registry.set("core::air", type);
+        if(!block_registry) {
+            std::cout << "We have no block_registry\n";
         }
-        {
-            auto type = tag::block_type{"core", "stone"};
-            type.set_flag(block_type_flag::can_be_replaced);
-            type.render_type = tag::basic_cube_render_type{"white_cube"};
-            block_registry.set("core::stone", type);
-        }
-        {
-            auto type = tag::block_type{"core", "dirt"};
-            type.set_flag(block_type_flag::can_be_replaced);
-            type.render_type = tag::basic_cube_render_type{"red_cube"};
-            block_registry.set("core::dirt", type);
-        }
-        {
-            auto type = tag::block_type{"core", "grass"};
-            type.set_flag(block_type_flag::can_be_replaced);
-            type.render_type = tag::basic_cube_render_type{"green_cube"};
-            block_registry.set("core::grass", type);
-        }
+       return dimensions[dimensionID].get_display_chunks(block_registry, coord_world, range);
     }
 }

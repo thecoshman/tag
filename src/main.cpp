@@ -216,7 +216,7 @@ void place_block(tag::application& app){
     glm::vec3 rayDirection = glm::normalize(app.cam.dir);
     util::Ray ray{app.cam.pos, rayDirection * 5.0f};
     
-    auto hit_blocks = app.world.trace_ray(ray, voxel_grid::chunked_voxel_grid::trace_ray_options::include_empty);
+    auto hit_blocks = app.world.trace_ray(ray, tag::voxel_grid::chunked_voxel_grid::trace_ray_options::include_empty);
     for(uint i = 0; i + 1 < hit_blocks.size(); i++){
         auto current = hit_blocks[i];
         auto next = hit_blocks[i+1];
@@ -255,6 +255,8 @@ int main(int argc, char** argv){
     initOGLsettings();
 
     app.window.centre_mouse();
+    
+    app.load_game_world();
     
     std::map<std::string, gldr::Texture2d> textures;
     textures.insert(std::make_pair("red_cube", loadTexture("resource/texture/reference_cube.png")));

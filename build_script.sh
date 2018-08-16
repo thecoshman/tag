@@ -10,4 +10,4 @@ cd glsdk_0_5_2
 make
 cd ..
 # make clean
-make
+make && bin/TAG_TestD
