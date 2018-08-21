@@ -7,20 +7,20 @@
 
 namespace tag {
     namespace voxel_grid {
-        new_data_chunk chunk_generator::generate(const chunk_coord& coord_chunk) const {
+        data_chunk chunk_generator::generate(const chunk_coord& coord_chunk) const {
             std::vector<block_instance> chunk_data;
-            chunk_data.reserve(chunk_size * chunk_size * chunk_size);
+            chunk_data.reserve(blocks_per_chunk);
             if(!block_registry) {
                 std::cout << "block_registry is null\n";
             }
-            auto air = block_registry->get("core::air");
-            auto stone = block_registry->get("core::stone");
+            auto air_id = block_registry->get("core::air")->first;
+            auto stone_id = block_registry->get("core::stone")->first;
 
             auto coord_world = to_world_coord(coord_chunk);
 
-            for (int y = 0; y < chunk_size; ++y) {
-                for(int x = 0; x < chunk_size; ++x){
-                    for(int z = 0; z < chunk_size; ++z){
+            for (int y = 0; y < chunk_size; y++) {
+                for(int x = 0; x < chunk_size; x++){
+                    for(int z = 0; z < chunk_size; z++){
                         float xf = (x + coord_world.x) / (chunk_size * 6.0);
                         float zf = (z + coord_world.z) / (chunk_size * 6.0);
 
@@ -35,13 +35,14 @@ namespace tag {
 
                         int h = value * chunk_size;
 
-                        auto block_type_id = coord_chunk.y == 0 && y < 0.5 * chunk_size && y < h ? stone->first : air->first;
+                        auto is_stone = coord_chunk.y == 0 && y < 0.5 * chunk_size && y < h;
+                        auto block_type_id = is_stone ? stone_id : air_id;
 
                         chunk_data.emplace_back(block_type_id, 0, 0, 0);
                     }
                 }
             }
-            return new_data_chunk(chunk_data);
+            return data_chunk(chunk_data);
         }
     }
 }

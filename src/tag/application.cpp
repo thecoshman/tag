@@ -3,15 +3,18 @@
 #include "tag/block_type.hpp"
 #include "tag/voxel_grid/chunk_generator.hpp"
 #include "util/registry.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 
-namespace {    
+namespace {
     std::vector<tag::voxel_grid::world_coord> get_overlapping_coords(util::AABB const& aabb){
         auto min = tag::voxel_grid::world_coord::fromGlmVec3(aabb.min);
         auto max = tag::voxel_grid::world_coord::fromGlmVec3(aabb.max);
         std::vector<tag::voxel_grid::world_coord> overlapping_coords;
-        for(int x = min.x; x <= max.x ; x++){
-            for(int y = min.y; y <= max.y ; y++){
-                for(int z = min.z; z <= max.z ; z++){
+        auto range = max - min;
+        overlapping_coords.reserve(range.x + range.y + range.z);
+        for(int x = min.x; x <= max.x ; ++x){
+            for(int y = min.y; y <= max.y ; ++y){
+                for(int z = min.z; z <= max.z ; ++z){
                     overlapping_coords.emplace_back(x, y, z);
                 }
             }
@@ -21,37 +24,41 @@ namespace {
 }
 
 namespace tag {
-    application::application() : world(cube_registry){
+    application::application() : selected_block_id(1) {
         player.position = glm::vec3(0,50,0);
 
         cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
         cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
 
-        player.is_space_free_query = [&](util::AABB const& aabb){
-            auto potential_hits = get_overlapping_coords(aabb);
-            for(auto coord : potential_hits){
-                if(!world.get(coord).is_flag_set(tag::voxel_grid::cube_flags::passable)){
-                    return false;
-                }
-            }
+        // player.is_space_free_query = [&](util::AABB const& aabb){
+        //     if(!world){
+        //         return true;
+        //     }
+        //     auto potential_hits = get_overlapping_coords(aabb);
+        //     for(auto coord : potential_hits) {
+        //         if(!world->is_passable(0, coord)){
+        //             return false;
+        //         }
+        //     }
+        //     return true;
+        // };
+        player.is_space_free_query = [](util::AABB const& aabb){
             return true;
         };
-        register_core_cube_types();
-        world.generate_world({0, 0, 0}, 5);
     }
 
     void application::keyboard_input(float dt){
         if(window.is_key_down(GLFW_KEY_W)){
-            player.move(tag::player::direction::forward);
+            player.move(player::direction::forward);
         }
         if(window.is_key_down(GLFW_KEY_S)){
-            player.move(tag::player::direction::backward);
+            player.move(player::direction::backward);
         }
         if(window.is_key_down(GLFW_KEY_A)){
-            player.move(tag::player::direction::left);
+            player.move(player::direction::left);
         }
         if(window.is_key_down(GLFW_KEY_D)){
-            player.move(tag::player::direction::right);
+            player.move(player::direction::right);
         }
         if(window.is_key_down(GLFW_KEY_SPACE)){
             player.jump();
@@ -62,11 +69,11 @@ namespace tag {
         }
 
         if(window.is_key_down(GLFW_KEY_1)){
-            block_place_selection = 1;
+            selected_block_id = 1;
         } else if(window.is_key_down(GLFW_KEY_2)){
-            block_place_selection = 2;
+            selected_block_id = 2;
         } else if(window.is_key_down(GLFW_KEY_3)){
-            block_place_selection = 3;
+            selected_block_id = 3;
         }
     }
 
@@ -80,7 +87,10 @@ namespace tag {
         if(window.is_mouse_down(GLFW_MOUSE_BUTTON_LEFT)){
             if(!leftMouseDown){
                 leftMouseDown = true;
-                on_left_click_fn(*this);
+                if(world) {
+                    auto ray = util::Ray{cam.pos, glm::normalize(cam.dir) * 5.0f};
+                    world->mine_blocks(0, ray, 100);
+                }
             }
         } else {
             leftMouseDown = false;
@@ -89,7 +99,10 @@ namespace tag {
         if(window.is_mouse_down(GLFW_MOUSE_BUTTON_RIGHT)){
             if(!rightMouseDown){
                 rightMouseDown = true;
-                on_right_click_fn(*this);
+                if(world) {
+                    auto ray = util::Ray{cam.pos, glm::normalize(cam.dir) * 5.0f};
+                    world->place_block(0, ray, selected_block_id);
+                }
             }
         } else {
             rightMouseDown = false;
@@ -110,18 +123,18 @@ namespace tag {
 
         std::string current_texture;// = "null";
 
-        auto coord = tag::voxel_grid::world_coord::fromGlmVec3(player.position);
+        auto coord = voxel_grid::world_coord::fromGlmVec3(player.position);
 
-        if(!new_world){
+        if(!world){
             std::cout << "Dude, there is no world\n";
         }
 
-        for(auto chunk : new_world->get_display_chunks(0, coord, 2)){
+        for(auto chunk : world->get_display_chunks(0, coord, 2)){
             for(auto block_coord_pair : chunk.renderable_blocks){
                 auto pos = block_coord_pair.first;
                 auto block = block_coord_pair.second;
 
-                auto modelMatrix = tag::voxel_grid::cube_type::getModelMatrix(pos);
+                auto modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x + 0.5, pos.y - 0.5, pos.z + 0.5));
                 gl::UniformMatrix4fv(mvpMat, 1, gl::FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
 
                 std::string desired_texture;
@@ -140,13 +153,6 @@ namespace tag {
         }
     }
 
-    void application::register_core_cube_types(){
-        air_type = cube_registry.register_new_type({tag::voxel_grid::cube_flags::invisible | tag::voxel_grid::cube_flags::passable, "air", "empty"});
-        block_place_selection = cube_registry.register_new_type({tag::voxel_grid::cube_flags::fully_blocks_los, "red", "red_cube"});
-        cube_registry.register_new_type({tag::voxel_grid::cube_flags::fully_blocks_los, "white", "white_cube"});
-        cube_registry.register_new_type({tag::voxel_grid::cube_flags::fully_blocks_los, "green", "green_cube"});
-    }
-
     void application::load_game_world(){
         auto block_registry = std::make_shared<util::registry<block_type>>();
 
@@ -159,7 +165,7 @@ namespace tag {
             block_registry->register_name(name);
         }
         {
-            /* block_type_flag options, fro reference
+            /* block_type_flag options, for reference
                none
                can_be_replaced
                gravity
@@ -170,34 +176,34 @@ namespace tag {
             */
 
             // Define all the data for the blocks
-            auto type = tag::block_type{"core", "air"};
+            auto type = block_type{"core", "air"};
             type.set_flag(block_type_flag::can_be_replaced);
             type.set_flag(block_type_flag::passable);
             type.set_flag(block_type_flag::invisible);
             block_registry->set("core::air", type);
 
-            type = tag::block_type{"core", "stone"};
+            type = block_type{"core", "stone"};
             type.set_flag(block_type_flag::is_solid_block);
             type.set_flag(block_type_flag::fully_blocks_los);
-            type.render_type = tag::basic_cube_render_type{"white_cube"};
+            type.render_type = basic_cube_render_type{"white_cube"};
             block_registry->set("core::stone", type);
 
-            type = tag::block_type{"core", "dirt"};
+            type = block_type{"core", "dirt"};
             type.set_flag(block_type_flag::is_solid_block);
             type.set_flag(block_type_flag::fully_blocks_los);
-            type.render_type = tag::basic_cube_render_type{"red_cube"};
+            type.render_type = basic_cube_render_type{"red_cube"};
             block_registry->set("core::dirt", type);
 
-            type = tag::block_type{"core", "grass"};
+            type = block_type{"core", "grass"};
             type.set_flag(block_type_flag::is_solid_block);
             type.set_flag(block_type_flag::passable);
-            type.render_type = tag::basic_cube_render_type{"green_cube"};
+            type.render_type = basic_cube_render_type{"green_cube"};
             block_registry->set("core::grass", type);
         }
 
-        new_world = std::make_unique<tag::game_world>(block_registry);
+        world = std::make_unique<game_world>(block_registry);
 
-        new_world->add_dimenion(voxel_grid::chunk_generator{block_registry});
+        world->add_dimenion(voxel_grid::chunk_generator{block_registry});
 
         std::cout << "World totally initialised\n";
     }

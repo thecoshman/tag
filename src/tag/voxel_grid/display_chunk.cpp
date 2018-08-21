@@ -1,11 +1,10 @@
-#include "tag/voxel_grid/new_display_chunk.hpp"
+#include "tag/voxel_grid/display_chunk.hpp"
 
 #include "tag/voxel_grid/coord.hpp"
-#include "tag/voxel_grid/data_chunk.hpp"
 
 namespace tag {
-    namespace voxel_grid{
-        new_display_chunk::new_display_chunk(std::shared_ptr<util::registry<tag::block_type>> block_registry, const chunk_coord& coord_chunk, const new_data_chunk& chunk){
+    namespace voxel_grid {
+        display_chunk::display_chunk(std::shared_ptr<util::registry<block_type>> block_registry, const chunk_coord& coord_chunk, const data_chunk& chunk){
             for(int x = 0; x < chunk_size; ++x){
                 for(int y = 0; y < chunk_size; ++y){
                     for(int z = 0; z < chunk_size; ++z){
@@ -18,11 +17,7 @@ namespace tag {
             }
         }
 
-        void new_display_chunk::clear(){
-            renderable_blocks.clear();
-        }
-
-        bool new_display_chunk::needs_rendering(std::shared_ptr<util::registry<tag::block_type>> block_registry, const new_data_chunk& chunk, const intra_chunk_coord& coord_intra_chunk){
+        bool display_chunk::needs_rendering(std::shared_ptr<util::registry<block_type>> block_registry, const data_chunk& chunk, const intra_chunk_coord& coord_intra_chunk){
             auto block = chunk.get_block(coord_intra_chunk);
             auto type_of_block = block_registry->get(block.type_id)->second;
 
@@ -38,14 +33,14 @@ namespace tag {
             return true;
         }
 
-        bool new_display_chunk::at_chunk_edge(const intra_chunk_coord& coord_intra_chunk){
+        bool display_chunk::at_chunk_edge(const intra_chunk_coord& coord_intra_chunk){
             if(coord_intra_chunk.x == 0 || coord_intra_chunk.x == (chunk_size - 1)){ return true; }
             if(coord_intra_chunk.y == 0 || coord_intra_chunk.y == (chunk_size - 1)){ return true; }
             if(coord_intra_chunk.z == 0 || coord_intra_chunk.z == (chunk_size - 1)){ return true; }
             return false;
         }
         
-        bool new_display_chunk::all_neighburs_block_los(std::shared_ptr<util::registry<tag::block_type>> block_registry, const new_data_chunk& chunk, const intra_chunk_coord& coord){
+        bool display_chunk::all_neighburs_block_los(std::shared_ptr<util::registry<block_type>> block_registry, const data_chunk& chunk, const intra_chunk_coord& coord){
             auto blocks_los = [block_registry, chunk, coord](intra_chunk_coord offset){
                 auto test_coord = coord + offset;
                 auto block = chunk.get_block(test_coord);

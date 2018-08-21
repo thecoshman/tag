@@ -1,39 +1,43 @@
 #include "tag/voxel_grid/data_chunk.hpp"
 
-#include "simplex.hpp"
+#include <stdexcept>
 
 namespace tag {
-    namespace voxel_grid{ 
-        void data_chunk::generate(const chunk_coord& coord_chunk){
-            if(coord_chunk.y != 0){
-                return; // for now, can only generate chunks at y=0 :(
-            }
-            auto coord_world = to_world_coord(coord_chunk);
+    namespace voxel_grid {
+        data_chunk::data_chunk(std::vector<block_instance> initialised_data): data(std::move(initialised_data)) {
+        }
 
-            for(int x = 0; x < chunk_size; x++){
-                for(int z = 0; z < chunk_size; z++){
-                    // float size = 16;
+        block_instance& data_chunk::get_block(const intra_chunk_coord& coord) {
+            assert_in_chunk(coord);
+            return data[to_index(coord)];
+        }
 
-                    float xf = (x + coord_world.x) / (chunk_size * 6.0);
-                    float zf = (z + coord_world.z) / (chunk_size * 6.0);
+        const block_instance& data_chunk::get_block(const intra_chunk_coord& coord) const {            
+            assert_in_chunk(coord);
+            return data[to_index(coord)];
+        }
 
-                    double value = util::simplex_noise(1, xf, zf);
+        void data_chunk::set_block(block_instance block, const intra_chunk_coord& coord) {
+            assert_in_chunk(coord);
+            data[to_index(coord)] = block;
+        }
 
-                    //compress the range a bit:
-                    value *= 0.7;
-                    value += 0.2;
-                    if (value > 1.0) {
-                        value = 1.0;
-                    }
+        int data_chunk::to_index(const intra_chunk_coord& coord) const {
+            int x = coord.x * chunk_size;
+            int y = coord.y * chunk_size * chunk_size;
+            int z = coord.z;
+            return x + y + z; 
+        }
+    
+        bool data_chunk::in_chunk(const intra_chunk_coord& coord) const {
+            static auto min = intra_chunk_coord{0, 0, 0};
+            static auto max = intra_chunk_coord{chunk_size, chunk_size, chunk_size};
+            return min <= coord && coord < max;
+        }
 
-                    int h = value * chunk_size;
-
-                    for (int y = 0; y < h; ++y) {
-                        if(y < 0.5 * chunk_size){
-                            set({ x, y,  z}, 2);
-                        }
-                    }
-                }
+        void data_chunk::assert_in_chunk(const intra_chunk_coord& coord) const {
+            if(!in_chunk(coord)) {
+                throw std::out_of_range("Coordinate not within chunk.");
             }
         }
     }

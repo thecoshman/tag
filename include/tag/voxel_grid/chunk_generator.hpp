@@ -2,7 +2,7 @@
 
 #include "tag/block_type.hpp"
 #include "tag/voxel_grid/coord.hpp"
-#include "tag/voxel_grid/new_data_chunk.hpp"
+#include "tag/voxel_grid/data_chunk.hpp"
 #include "util/registry.hpp"
 
 namespace tag {
@@ -11,7 +11,7 @@ namespace tag {
         {
             const std::shared_ptr<util::registry<tag::block_type>> block_registry;
 
-            new_data_chunk generate(const chunk_coord& coord_chunk) const;
+            data_chunk generate(const chunk_coord& coord_chunk) const;
         };
     }
 }

@@ -1,40 +1,29 @@
 #pragma once
 
+#include <vector>
+
+#include "tag/block_instance.hpp"
 #include "tag/voxel_grid/coord.hpp"
-#include "tag/voxel_grid/cube_registry.hpp"
-#include "tag/voxel_grid/cube_type.hpp"
 
 namespace tag {
-    namespace voxel_grid{    
-        struct data_chunk{
-            data_chunk(const cube_type_registry& cube_registry) : cube_registry(cube_registry){
-                clear();
-            }
+    namespace voxel_grid {
+        struct data_chunk {
+            data_chunk(std::vector<block_instance> initialised_data);
 
-            void generate(const chunk_coord& coord_chunk);
+            block_instance& get_block(const intra_chunk_coord& coord);
 
-            void set(const intra_chunk_coord& coord, cube_type_id type_id){
-                voxel_array[index(coord)] = type_id;
-            }
-            
-            const cube_type& get(const intra_chunk_coord& coord) const{
-                return cube_registry.get(voxel_array[index(coord)]);
-            }
+            const block_instance& get_block(const intra_chunk_coord& coord) const;
 
-            void clear(){
-                std::fill(voxel_array.begin(), voxel_array.end(), 0);
-            }
+            void set_block(block_instance block, const intra_chunk_coord& coord);
 
             private:
-            int index(const intra_chunk_coord& coord) const{
-                int x = coord.x * chunk_size;
-                int y = coord.y * chunk_size * chunk_size;
-                int z = coord.z;
-                return x + y + z;   
-            }
+            std::vector<block_instance> data;
 
-            std::array<cube_type_id, chunk_size * chunk_size * chunk_size> voxel_array;
-            const cube_type_registry& cube_registry;
+            int to_index(const intra_chunk_coord& coord) const;
+    
+            bool in_chunk(const intra_chunk_coord& coord) const;
+
+            void assert_in_chunk(const intra_chunk_coord& coord) const;
         };
     }
 }

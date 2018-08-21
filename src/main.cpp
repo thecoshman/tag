@@ -202,31 +202,6 @@ void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, 
     std::cout << "Message: " << message << "\n";
 }
 
-void break_block(tag::application& app){
-    glm::vec3 rayDirection = glm::normalize(app.cam.dir);
-    util::Ray ray{app.cam.pos, rayDirection * 5.0f};
-
-    auto hit_blocks = app.world.trace_ray(ray);
-    if(!hit_blocks.empty()){
-        app.world.set(hit_blocks[0].first, 0);
-    }
-}
-
-void place_block(tag::application& app){
-    glm::vec3 rayDirection = glm::normalize(app.cam.dir);
-    util::Ray ray{app.cam.pos, rayDirection * 5.0f};
-    
-    auto hit_blocks = app.world.trace_ray(ray, tag::voxel_grid::chunked_voxel_grid::trace_ray_options::include_empty);
-    for(uint i = 0; i + 1 < hit_blocks.size(); i++){
-        auto current = hit_blocks[i];
-        auto next = hit_blocks[i+1];
-        if(current.second.textureName == "empty" && next.second.textureName != "empty"){
-            app.world.set(current.first, app.block_place_selection);
-            break;
-        }
-    }
-}
-
 template<typename T>
 float to_microseconds(T time_point){
     return std::chrono::duration_cast<std::chrono::microseconds>(time_point).count();
@@ -257,7 +232,7 @@ int main(int argc, char** argv){
     app.window.centre_mouse();
     
     app.load_game_world();
-    
+
     std::map<std::string, gldr::Texture2d> textures;
     textures.insert(std::make_pair("red_cube", loadTexture("resource/texture/reference_cube.png")));
     textures.insert(std::make_pair("green_cube", loadTexture("resource/texture/green_cube.png")));
@@ -279,9 +254,6 @@ int main(int argc, char** argv){
     initShader(cubeShader);
     cubeVao.bind();
     initBufferData(indexBuffer, vertexBuffer, textureCoordBuffer);
-
-    app.on_left_click_fn = break_block;
-    app.on_right_click_fn = place_block;
 
     auto new_time = clock::now();
     auto delta_time = new_time - old_time;
