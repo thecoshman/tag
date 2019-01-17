@@ -30,19 +30,16 @@ namespace tag {
         cam.pos = glm::vec3(10,1.7,-15); // average person about that tall, right?
         cam.dir = glm::normalize(glm::vec3(-10.0,0.0,15.0));
 
-        // player.is_space_free_query = [&](util::AABB const& aabb){
-        //     if(!world){
-        //         return true;
-        //     }
-        //     auto potential_hits = get_overlapping_coords(aabb);
-        //     for(auto coord : potential_hits) {
-        //         if(!world->is_passable(0, coord)){
-        //             return false;
-        //         }
-        //     }
-        //     return true;
-        // };
-        player.is_space_free_query = [](util::AABB const& aabb){
+        player.is_space_free_query = [&](util::AABB const& aabb){
+            if(!world){
+                return true;
+            }
+            auto potential_hits = get_overlapping_coords(aabb);
+            for(auto coord : potential_hits) {
+                if(!world->is_passable(0, coord)){
+                    return false;
+                }
+            }
             return true;
         };
     }

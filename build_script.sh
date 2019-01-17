@@ -8,6 +8,8 @@ premake4 gmake
 cd glsdk_0_5_2
 # make clean
 make
+make config=release
 cd ..
 # make clean
-make && bin/TAG_TestD
+make
+make config=release && bin/TAG_Test

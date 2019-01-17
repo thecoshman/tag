@@ -262,12 +262,22 @@ int main(int argc, char** argv){
 
     const float physics_step = 1000.0f / 120;
     std::cout << "physics_step set to: " << physics_step << std::endl;
-    float temporal_accumulator = 0.0;
+    auto temporal_accumulator = 0.0f;
 
     font debug_font("consolas");
     auto frames_drawn = 0;
-    auto fps_display_timer = 0.0f;
+    auto timers_display_counter = 0.0f;
     auto fps_value = 0.0f;
+
+    auto physics_timer = clock::now();
+    std::array<float, 100> physics_timings;
+    size_t physics_timing_index = 0;
+    auto mean_physics_time = 0.0f;
+
+    auto render_timer = clock::now();
+    std::array<float, 100> render_timings;
+    size_t render_timing_index = 0;
+    auto mean_render_time = 0.0f;
 
     //Main loop
     while(!app.window.should_close() && app.run){
@@ -277,27 +287,50 @@ int main(int argc, char** argv){
         new_time = clock::now();
         delta_time = new_time - old_time;
         temporal_accumulator += (to_microseconds(delta_time)/1000);
-        fps_display_timer += to_microseconds(delta_time);
+        timers_display_counter += to_microseconds(delta_time);
 
         while(temporal_accumulator >  physics_step){
             temporal_accumulator -= physics_step;
+            physics_timer = clock::now();
             app.update(physics_step);
+            physics_timings[physics_timing_index++] = to_microseconds(clock::now() - physics_timer);
+            if(physics_timing_index >= physics_timings.size()){
+                physics_timing_index = 0;
+            }
         }
 
         app.cam.pos = app.player.eye_point();
-        app.display(cubeShader, cubeVao, textures);
-        skybox.render(app.cam);
-        ++frames_drawn;
 
-        if(fps_display_timer > 1000000.0f){ // update the fps display once per second
-            fps_value = frames_drawn/fps_display_timer*1000000;
+        if(timers_display_counter > 1000000.0f){ // update the timers once per second
+            fps_value = frames_drawn/timers_display_counter*1000000;
             frames_drawn = 0;
-            fps_display_timer -= 1000000.0f;
+            timers_display_counter -= 1000000.0f;
+            mean_physics_time = 0.0f;
+            for(auto time : physics_timings){
+                mean_physics_time += time;
+            }
+            mean_physics_time /= physics_timings.size();
+            mean_render_time = 0.0f;
+            for(auto time : render_timings){
+                mean_render_time += time;
+            }
+            mean_render_time /= render_timings.size();
+            fps_value = 1 / mean_render_time *  1000000.0f;
         }
 
-        debug_font.draw("fps: " + std::to_string(fps_value), glm::vec2(0.0f,0.0f));
+        render_timer = clock::now();
+        app.display(cubeShader, cubeVao, textures);
+        skybox.render(app.cam);
+        debug_font.draw("fps: " + std::to_string(fps_value), glm::vec2(0.0f, 0.0f));
         debug_font.draw("pos: (" + std::to_string(app.player.position.x) + ", " + std::to_string(app.player.position.y) + ", " + std::to_string(app.player.position.z) + ")", glm::vec2(0.0f, 30.0f));
+        debug_font.draw("mean phyiscs time: " + std::to_string(mean_physics_time / 1000) + "ms", glm::vec2(0.0f, 60.0f));
+        debug_font.draw("mean render time:  " + std::to_string(mean_render_time / 1000) + "ms", glm::vec2(0.0f, 90.0f));
+        render_timings[render_timing_index++] = to_microseconds(clock::now() - render_timer);
+        if(render_timing_index >= render_timings.size()){
+            render_timing_index = 0;
+        }
 
+        ++frames_drawn;
         app.window.swap_buffers();
         glfwPollEvents();
     }
