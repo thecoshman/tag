@@ -1,8 +1,11 @@
 #include <chrono>
+#include <unordered_set>
 
 #include "util/skyBox.hpp"
 #include "tag/application.hpp"
 #include "util/font.hpp"
+#include "util/loader/loadtexture.hpp"
+#include "util/gl/texture_atlas.hpp"
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -152,24 +155,6 @@ void initBufferData(gldr::indexVertexBuffer& indexBuffer, gldr::dataVertexBuffer
     gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 0, 0);
 }
 
-gldr::Texture2d loadTexture(const std::string& file){
-    std::unique_ptr<glimg::ImageSet> imageSet(glimg::loaders::stb::LoadFromFile(file));
-    auto image = imageSet->GetImage(0);
-    auto dim = image.GetDimensions();
-
-    gldr::Texture2d texture;
-    texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Nearest);
-    texture.setFiltering(gldr::textureOptions::FilterDirection::Magnification, gldr::textureOptions::FilterMode::Nearest);
-
-    texture.imageData(dim.width, dim.height,
-        gldr::textureOptions::Format::RGBA,
-        gldr::textureOptions::InternalFormat::SRGB,
-        gldr::textureOptions::DataType::UnsignedByte,
-        image.GetImageData()
-    );
-    return texture;
-}
-
 void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam){
     std::string srcName;
     switch(source){
@@ -234,9 +219,19 @@ int main(int argc, char** argv){
     app.load_game_world();
 
     std::map<std::string, gldr::Texture2d> textures;
-    textures.insert(std::make_pair("red_cube", loadTexture("resource/texture/reference_cube.png")));
-    textures.insert(std::make_pair("green_cube", loadTexture("resource/texture/green_cube.png")));
-    textures.insert(std::make_pair("white_cube", loadTexture("resource/texture/white_cube.png")));
+    textures.insert(std::make_pair("red_cube", util::loader::loadTexture("resource/texture/reference_cube.png")));
+    textures.insert(std::make_pair("green_cube", util::loader::loadTexture("resource/texture/green_cube.png")));
+    textures.insert(std::make_pair("white_cube", util::loader::loadTexture("resource/texture/white_cube.png")));
+
+    std::map<std::string, std::string> texturesForAtlas;
+    texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
+    texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
+    texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
+
+    util::gl::TextureAtlas atlas(texturesForAtlas);
+
+    // As a temp thing, move the texture out so that I can try rending it like a 'normal' cube
+    textures.insert(std::make_pair("dev_magic", std::move(atlas.texture)));
 
     auto skybox = util::sky_box{{
         {gldr::textureOptions::CubeMapFace::PositiveX, "resource/texture/sky_box_E.png"},

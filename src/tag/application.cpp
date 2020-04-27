@@ -71,6 +71,8 @@ namespace tag {
             selected_block_id = 2;
         } else if(window.is_key_down(GLFW_KEY_3)){
             selected_block_id = 3;
+        } else if(window.is_key_down(GLFW_KEY_4)){
+            selected_block_id = 4;
         }
     }
 
@@ -140,6 +142,7 @@ namespace tag {
                     case 1: desired_texture = "white_cube"; break;
                     case 2: desired_texture = "red_cube"; break;
                     case 3: desired_texture = "green_cube"; break;
+                    case 4: desired_texture = "dev_magic"; break;
                 }
                 if(desired_texture != current_texture) {
                     current_texture = desired_texture;
@@ -158,7 +161,8 @@ namespace tag {
             "core::air",
             "core::stone",
             "core::dirt",
-            "core::grass"}) {
+            "core::grass",
+            "core::dev_magic"}) {
             block_registry->register_name(name);
         }
         {
@@ -196,6 +200,12 @@ namespace tag {
             type.set_flag(block_type_flag::passable);
             type.render_type = basic_cube_render_type{"green_cube"};
             block_registry->set("core::grass", type);
+
+            type = block_type{"core", "dev_magic"};
+            type.set_flag(block_type_flag::is_solid_block);
+            type.set_flag(block_type_flag::fully_blocks_los);
+            type.render_type = basic_cube_render_type{"dev_magic"};
+            block_registry->set("core::dev_magic", type);
         }
 
         world = std::make_unique<game_world>(block_registry);
