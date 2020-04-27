@@ -24,7 +24,7 @@ namespace tag {
         void load_game_world();
 
         glm::ivec2 window_size = glm::ivec2(800, 600);
-        util::glfw_window window = util::glfw_window(window_size, "TAG V6");
+        util::glfw_window window = util::glfw_window(window_size, "TAG V7");
         tag::player player;
         util::Camera cam;
 
