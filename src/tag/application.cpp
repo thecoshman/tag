@@ -42,14 +42,6 @@ namespace tag {
             }
             return true;
         };
-
-        {
-            std::map<std::string, std::string> texturesForAtlas;
-            texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
-            texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
-            texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
-            textureAtlas.load(texturesForAtlas);
-        }
     }
 
     void application::keyboard_input(float dt){
@@ -79,8 +71,6 @@ namespace tag {
             selected_block_id = 2;
         } else if(window.is_key_down(GLFW_KEY_3)){
             selected_block_id = 3;
-        } else if(window.is_key_down(GLFW_KEY_4)){
-            selected_block_id = 4;
         }
     }
 
@@ -154,7 +144,6 @@ namespace tag {
                     case 1: desired_texture = "white_cube"; break;
                     case 2: desired_texture = "red_cube"; break;
                     case 3: desired_texture = "green_cube"; break;
-                    case 4: desired_texture = "dev_magic"; break;
                 }
                 auto uvCoords = textureAtlas.getUVCoords(desired_texture);
                 gl::Uniform2fv(uvFrom, 1, glm::value_ptr(glm::vec2{uvCoords.fromU, uvCoords.fromV}));
@@ -166,6 +155,14 @@ namespace tag {
     }
 
     void application::load_game_world(){
+        {
+            std::map<std::string, std::string> texturesForAtlas;
+            texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
+            texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
+            texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
+            textureAtlas.load(texturesForAtlas);
+        }
+
         auto block_registry = std::make_shared<util::registry<block_type>>();
 
         // Register names of blocks
@@ -173,8 +170,7 @@ namespace tag {
             "core::air",
             "core::stone",
             "core::dirt",
-            "core::grass",
-            "core::dev_magic"}) {
+            "core::grass"}) {
             block_registry->register_name(name);
         }
         {
@@ -212,12 +208,6 @@ namespace tag {
             type.set_flag(block_type_flag::passable);
             type.render_type = basic_cube_render_type{"green_cube"};
             block_registry->set("core::grass", type);
-
-            type = block_type{"core", "dev_magic"};
-            type.set_flag(block_type_flag::is_solid_block);
-            type.set_flag(block_type_flag::fully_blocks_los);
-            type.render_type = basic_cube_render_type{"dev_magic"};
-            block_registry->set("core::dev_magic", type);
         }
 
         world = std::make_unique<game_world>(block_registry);
