@@ -8,11 +8,21 @@
 
 namespace util{
     namespace gl{
-        struct TextureAtlas{
-            TextureAtlas(const std::map<std::string, std::string>& textureDetails);
+        struct MappedUV {
+            float fromU, fromV, toU, toV;
+        };
 
-            // for now, let it be public so that it can used as a normal cube texture
+        struct TextureAtlas{
+            void load(const std::map<std::string, std::string>& textureDetails);
+
+            void bind() const;
+
+            MappedUV getUVCoords(const std::string& textureName) const;
+
+            private:
             gldr::Texture2d texture;
+
+            std::map<std::string, MappedUV> textureMapping;
         };
     }
 }

@@ -25,19 +25,42 @@ namespace {
         std::string name;
         std::unique_ptr<glimg::ImageSet> data;
 
-        int width(){
+        int width() const{
             return data->GetImage(0).GetDimensions().width;
         }
 
-        int height(){
+        int height() const{
             return data->GetImage(0).GetDimensions().height;
         }
+
+        char pixelChannelValue(int index) const{
+            return *(((char*) data->GetImage(0).GetImageData()) + index);
+        }
     };
+
+    void blit(std::vector<char>& destination, int atlasPixelSize, std::pair<int, int> offset, const AtlasedTexture& source){
+        for (int y = 0; y < source.height(); ++y){
+            int desty = offset.second + y;
+            for (int x = 0; x < source.width(); ++x){
+                int destx = offset.first + x;
+
+                int srcIndex = (y * source.width()) + x;
+                int dstIndex = (desty * atlasPixelSize) + destx;
+
+                // factor in we have 4 bytes per pixel
+                srcIndex *= 4;
+                dstIndex *= 4;
+                for (int rgba = 0; rgba < 4; ++rgba){
+                    destination[dstIndex + rgba] = source.pixelChannelValue(srcIndex + rgba);
+                }
+            }
+        }
+    }
 }
 
 namespace util{
     namespace gl{
-        TextureAtlas::TextureAtlas(const std::map<std::string, std::string>& texturesToLoad){
+        void TextureAtlas::load(const std::map<std::string, std::string>& texturesToLoad){
             std::vector<AtlasedTexture> imageData;
             int cellSize = 1;
 
@@ -78,25 +101,19 @@ namespace util{
                 int offsetY = cellY * cellSize;
 
                 std::cout << "Allocating '" << source.name << "' to grid cell (" << cellX << "," << cellY << "). ";
-                std::cout << "That's a pixel offset of (" << offsetX << "," << offsetY << ")\n";
+                std::cout << "Pixel coord (" << offsetX << "," << offsetY << ") to (" << (offsetX + source.width()) << "," << (offsetY + source.height()) << ") ";
 
-                for (int y = 0; y < source.height(); ++y){
-                    int desty = offsetY + y;
-                    for (int x = 0; x < source.width(); ++x){
-                        int destx = offsetX + x;
+                auto mappedUV = MappedUV{
+                    static_cast<float>(offsetX)                   / atlasPixelSize,
+                    static_cast<float>(offsetY)                   / atlasPixelSize,
+                    static_cast<float>(offsetX + source.width())  / atlasPixelSize,
+                    static_cast<float>(offsetY + source.height()) / atlasPixelSize
+                };
 
-                        int srcIndex = (y * source.width()) + x;
-                        int dstIndex = (desty * atlasPixelSize) + destx;
-                        
-                        // factor in we have 4 bytes per pixel
-                        srcIndex *= 4;
-                        dstIndex *= 4;
-                        for (int rgba = 0; rgba < 4; ++rgba){
-                            char value = *(((char*)source.data->GetImage(0).GetImageData()) + (srcIndex + rgba));
-                            combinedPixels[dstIndex + rgba] = value;
-                        }
-                    }
-                }
+                std::cout << "UV (" << mappedUV.fromU << "," << mappedUV.fromV << ") to (" << mappedUV.toU << "," << mappedUV.toV << ")\n";
+
+                blit(combinedPixels, atlasPixelSize, {offsetX, offsetY}, source);
+                textureMapping.insert({source.name, mappedUV});
             }
 
             texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Nearest);
@@ -108,6 +125,20 @@ namespace util{
                 gldr::textureOptions::DataType::UnsignedByte,
                 combinedPixels.data()
             );
+        }
+
+        void TextureAtlas::bind() const {
+            texture.bind();
+        }
+
+        MappedUV TextureAtlas::getUVCoords(const std::string& textureName) const {
+            auto search = textureMapping.find(textureName);
+            if (search == textureMapping.end()) {
+                std::cout << "Failed to find '" << textureName << "' in texture atlas\n";
+                return {0,0,1,1};
+            } else {
+                return search->second;
+            }
         }
     }
 }

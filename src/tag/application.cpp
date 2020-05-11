@@ -42,6 +42,14 @@ namespace tag {
             }
             return true;
         };
+
+        {
+            std::map<std::string, std::string> texturesForAtlas;
+            texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
+            texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
+            texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
+            textureAtlas.load(texturesForAtlas);
+        }
     }
 
     void application::keyboard_input(float dt){
@@ -114,10 +122,12 @@ namespace tag {
         player.update(dt);
     }
 
-    void application::display(const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures){
+    void application::display(const gldr::Program& program, const gldr::VertexArray& vao){
         vao.bind();
         program.use();
         GLint mvpMat = program.getUniformLocation("mvpMat");
+        GLint uvFrom = program.getUniformLocation("uvFrom");
+        GLint uvTo   = program.getUniformLocation("uvTo");
         auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
 
         std::string current_texture;// = "null";
@@ -127,6 +137,8 @@ namespace tag {
         if(!world){
             std::cout << "Dude, there is no world\n";
         }
+
+        textureAtlas.bind();
 
         for(auto chunk : world->get_display_chunks(0, coord, 2)){
             for(auto block_coord_pair : chunk.renderable_blocks){
@@ -144,10 +156,10 @@ namespace tag {
                     case 3: desired_texture = "green_cube"; break;
                     case 4: desired_texture = "dev_magic"; break;
                 }
-                if(desired_texture != current_texture) {
-                    current_texture = desired_texture;
-                    textures.find(current_texture)->second.bind();
-                }
+                auto uvCoords = textureAtlas.getUVCoords(desired_texture);
+                gl::Uniform2fv(uvFrom, 1, glm::value_ptr(glm::vec2{uvCoords.fromU, uvCoords.fromV}));
+                gl::Uniform2fv(uvTo, 1, glm::value_ptr(glm::vec2{uvCoords.toU, uvCoords.toV}));
+
                 gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
             }
         }

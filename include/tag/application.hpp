@@ -8,6 +8,7 @@
 #include "tag/game_world.hpp"
 #include "util/camera.hpp"
 #include "util/glfw_window.hpp"
+#include "util/gl/texture_atlas.hpp"
 
 namespace tag {
     struct application{
@@ -19,7 +20,7 @@ namespace tag {
 
         void update(float dt);
 
-        void display(const gldr::Program& program, const gldr::VertexArray& vao, const std::map<std::string, gldr::Texture2d>& textures);
+        void display(const gldr::Program& program, const gldr::VertexArray& vao);
 
         void load_game_world();
 
@@ -35,5 +36,7 @@ namespace tag {
         int selected_block_id;
 
         std::unique_ptr<tag::game_world> world;
+
+        util::gl::TextureAtlas textureAtlas;
     };
 }

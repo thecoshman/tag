@@ -5,7 +5,6 @@
 #include "tag/application.hpp"
 #include "util/font.hpp"
 #include "util/loader/loadtexture.hpp"
-#include "util/gl/texture_atlas.hpp"
 
 void initOGLsettings(){
     gl::ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -44,9 +43,15 @@ void initShader(gldr::Program& program){
         "\n"
         "uniform sampler2D texture_sampler;\n"
         "\n"
+        "uniform vec2 uvFrom;\n"
+        "uniform vec2 uvTo;"
+        "\n"
         "void main()\n"
         "{\n"
-        "   outputColor = texture(texture_sampler, texture_coord_from_vshader);\n"
+        "   vec2 uvScale = uvTo - uvFrom;"
+        "   vec2 texture_coord = uvFrom + (texture_coord_from_vshader * uvScale);"
+        "   outputColor = texture(texture_sampler, texture_coord);\n"
+        // "   outputColor = texture(texture_sampler, texture_coord_from_vshader);\n"
         "}\n"
     );
 
@@ -218,21 +223,6 @@ int main(int argc, char** argv){
     
     app.load_game_world();
 
-    std::map<std::string, gldr::Texture2d> textures;
-    textures.insert(std::make_pair("red_cube", util::loader::loadTexture("resource/texture/reference_cube.png")));
-    textures.insert(std::make_pair("green_cube", util::loader::loadTexture("resource/texture/green_cube.png")));
-    textures.insert(std::make_pair("white_cube", util::loader::loadTexture("resource/texture/white_cube.png")));
-
-    std::map<std::string, std::string> texturesForAtlas;
-    texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
-    texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
-    texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
-
-    util::gl::TextureAtlas atlas(texturesForAtlas);
-
-    // As a temp thing, move the texture out so that I can try rending it like a 'normal' cube
-    textures.insert(std::make_pair("dev_magic", std::move(atlas.texture)));
-
     auto skybox = util::sky_box{{
         {gldr::textureOptions::CubeMapFace::PositiveX, "resource/texture/sky_box_E.png"},
         {gldr::textureOptions::CubeMapFace::NegativeX, "resource/texture/sky_box_W.png"},
@@ -314,7 +304,7 @@ int main(int argc, char** argv){
         }
 
         render_timer = clock::now();
-        app.display(cubeShader, cubeVao, textures);
+        app.display(cubeShader, cubeVao);
         skybox.render(app.cam);
         debug_font.draw("fps: " + std::to_string(fps_value), glm::vec2(0.0f, 0.0f));
         debug_font.draw("pos: (" + std::to_string(app.player.position.x) + ", " + std::to_string(app.player.position.y) + ", " + std::to_string(app.player.position.z) + ")", glm::vec2(0.0f, 30.0f));
