@@ -91,7 +91,7 @@ namespace tag {
             std::cout << "attempted to mine blocks in a dimension that doesn't exist\n";
             return;
         }
-        auto air_id = block_registry->get("core::air")->first;
+        auto air_id = block_registry->get_id("core::air").value();
 
         auto block_coords = ray_to_block_coords(ray);
         for(auto& coord : block_coords){
@@ -117,8 +117,8 @@ namespace tag {
             auto current_block_instance = dimensions[dimensionID].get_block(current_coord);
             auto next_block_instance = dimensions[dimensionID].get_block(next_coord);
 
-            auto current_block_type = block_registry->get(current_block_instance.type_id)->second;
-            auto next_block_type = block_registry->get(next_block_instance.type_id)->second;
+            auto current_block_type = block_registry->get(current_block_instance.type_id).value();
+            auto next_block_type = block_registry->get(next_block_instance.type_id).value();
 
             if(current_block_type.get_flag(block_type_flag::can_be_replaced) && !next_block_type.get_flag(block_type_flag::can_be_replaced)) {
                 dimensions[dimensionID].set_block({place_id, 0, 0, 0}, current_coord);
@@ -133,7 +133,7 @@ namespace tag {
             return false;
         }
         auto block_instance = dimensions[dimensionID].get_block(coord);
-        auto block_type = block_registry->get(block_instance.type_id)->second;
+        auto block_type = block_registry->get(block_instance.type_id).value();
         return block_type.get_flag(block_type_flag::passable);
     }
 }

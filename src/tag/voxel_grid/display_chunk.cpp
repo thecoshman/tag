@@ -19,7 +19,7 @@ namespace tag {
 
         bool display_chunk::needs_rendering(std::shared_ptr<util::registry<block_type>> block_registry, const data_chunk& chunk, const intra_chunk_coord& coord_intra_chunk){
             auto block = chunk.get_block(coord_intra_chunk);
-            auto type_of_block = block_registry->get(block.type_id)->second;
+            auto type_of_block = block_registry->get(block.type_id).value();
 
             if(type_of_block.get_flag(block_type_flag::invisible)){
                 return false;
@@ -44,7 +44,7 @@ namespace tag {
             auto blocks_los = [block_registry, chunk, coord](intra_chunk_coord offset){
                 auto test_coord = coord + offset;
                 auto block = chunk.get_block(test_coord);
-                auto block_type = block_registry->get(block.type_id)->second;
+                auto block_type = block_registry->get(block.type_id).value();
                 return block_type.get_flag(block_type_flag::fully_blocks_los);       
             };
 

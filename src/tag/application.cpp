@@ -155,60 +155,48 @@ namespace tag {
     }
 
     void application::load_game_world(){
-        {
-            std::map<std::string, std::string> texturesForAtlas;
-            texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
-            texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
-            texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
-            textureAtlas.load(texturesForAtlas);
-        }
+        std::map<std::string, std::string> texturesForAtlas;
+        texturesForAtlas.insert(std::make_pair("red_cube", "resource/texture/reference_cube.png"));
+        texturesForAtlas.insert(std::make_pair("green_cube", "resource/texture/green_cube.png"));
+        texturesForAtlas.insert(std::make_pair("white_cube", "resource/texture/white_cube.png"));
+        textureAtlas.load(texturesForAtlas);
 
         auto block_registry = std::make_shared<util::registry<block_type>>();
 
-        // Register names of blocks
-        for(auto&& name : {
-            "core::air",
-            "core::stone",
-            "core::dirt",
-            "core::grass"}) {
-            block_registry->register_name(name);
-        }
-        {
-            /* block_type_flag options, for reference
-               none
-               can_be_replaced
-               gravity
-               is_solid_block
-               passable
-               fully_blocks_los
-               invisible
-            */
+        /* block_type_flag options, for reference
+           none
+           can_be_replaced
+           gravity
+           is_solid_block
+           passable
+           fully_blocks_los
+           invisible
+        */
 
-            // Define all the data for the blocks
-            auto type = block_type{"core", "air"};
-            type.set_flag(block_type_flag::can_be_replaced);
-            type.set_flag(block_type_flag::passable);
-            type.set_flag(block_type_flag::invisible);
-            block_registry->set("core::air", type);
+        // Define all the data for the blocks
+        auto type = block_type{"core", "air"};
+        type.set_flag(block_type_flag::can_be_replaced);
+        type.set_flag(block_type_flag::passable);
+        type.set_flag(block_type_flag::invisible);
+        block_registry->set("core::air", type);
 
-            type = block_type{"core", "stone"};
-            type.set_flag(block_type_flag::is_solid_block);
-            type.set_flag(block_type_flag::fully_blocks_los);
-            type.render_type = basic_cube_render_type{"white_cube"};
-            block_registry->set("core::stone", type);
+        type = block_type{"core", "stone"};
+        type.set_flag(block_type_flag::is_solid_block);
+        type.set_flag(block_type_flag::fully_blocks_los);
+        type.render_type = basic_cube_render_type{"white_cube"};
+        block_registry->set("core::stone", type);
 
-            type = block_type{"core", "dirt"};
-            type.set_flag(block_type_flag::is_solid_block);
-            type.set_flag(block_type_flag::fully_blocks_los);
-            type.render_type = basic_cube_render_type{"red_cube"};
-            block_registry->set("core::dirt", type);
+        type = block_type{"core", "dirt"};
+        type.set_flag(block_type_flag::is_solid_block);
+        type.set_flag(block_type_flag::fully_blocks_los);
+        type.render_type = basic_cube_render_type{"red_cube"};
+        block_registry->set("core::dirt", type);
 
-            type = block_type{"core", "grass"};
-            type.set_flag(block_type_flag::is_solid_block);
-            type.set_flag(block_type_flag::passable);
-            type.render_type = basic_cube_render_type{"green_cube"};
-            block_registry->set("core::grass", type);
-        }
+        type = block_type{"core", "grass"};
+        type.set_flag(block_type_flag::is_solid_block);
+        type.set_flag(block_type_flag::passable);
+        type.render_type = basic_cube_render_type{"green_cube"};
+        block_registry->set("core::grass", type);
 
         world = std::make_unique<game_world>(block_registry);
 

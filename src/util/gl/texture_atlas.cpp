@@ -113,7 +113,7 @@ namespace util{
                 std::cout << "UV (" << mappedUV.fromU << "," << mappedUV.fromV << ") to (" << mappedUV.toU << "," << mappedUV.toV << ")\n";
 
                 blit(combinedPixels, atlasPixelSize, {offsetX, offsetY}, source);
-                textureMapping.insert({source.name, mappedUV});
+                textureMapping.set(source.name, mappedUV);
             }
 
             texture.setFiltering(gldr::textureOptions::FilterDirection::Minification, gldr::textureOptions::FilterMode::Nearest);
@@ -132,12 +132,12 @@ namespace util{
         }
 
         MappedUV TextureAtlas::getUVCoords(const std::string& textureName) const {
-            auto search = textureMapping.find(textureName);
-            if (search == textureMapping.end()) {
+            auto coords = textureMapping.get(textureName);
+            if (coords) {
+                return coords.value();
+            } else {
                 std::cout << "Failed to find '" << textureName << "' in texture atlas\n";
                 return {0,0,1,1};
-            } else {
-                return search->second;
             }
         }
     }

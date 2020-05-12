@@ -9,9 +9,12 @@
 namespace util {
     template<typename T>
     struct registry {
+        // Ensures a given name is registered
         int register_name(const std::string& name) {
             auto next_index = static_cast<int>(name_mapping.size());
             auto insertion_result = name_mapping.insert({name, next_index});
+            // insertion_result.first is iterator to new/existing item with this name
+            // insertion_result.second is boolean value saying if it was a new item
             if(insertion_result.second) {
                 // A new name was added to the mapping
                 data.push_back(std::nullopt);
@@ -19,11 +22,11 @@ namespace util {
             return insertion_result.first->second; // return the ID the new/existing
         }
 
-        std::optional<std::pair<int, const T&> > get(const std::string& name) const {
+        std::optional<T> get(const std::string& name) const {
             return get(get_id(name));
         }
         
-        std::optional<std::pair<int, T> > get(const std::optional<int>& id) const {
+        std::optional<T> get(const std::optional<int>& id) const {
             if(!id) {
                 return std::nullopt;
             }
@@ -36,7 +39,7 @@ namespace util {
                 return std::nullopt;
             }
             
-            return std::make_pair(*id, *item);
+            return *item;
         }
         
         std::optional<int> get_id(const std::string& name) const {
@@ -48,9 +51,13 @@ namespace util {
         }
         
         void set(const std::string& name, T item) {
-            set(get_id(name), item);
+            set(register_name(name), item);
         }
-        
+
+        private:
+        std::unordered_map<std::string, int> name_mapping;
+        std::vector<std::optional<T>> data;
+
         void set(const std::optional<int>& id, T item) {
             if(!id) {
                 return;
@@ -62,9 +69,5 @@ namespace util {
             
             data[index] = item;
         }
-
-        private:
-        std::unordered_map<std::string, int> name_mapping;
-        std::vector<std::optional<T>> data;
     };
 }

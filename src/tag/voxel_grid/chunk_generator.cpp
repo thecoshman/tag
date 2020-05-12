@@ -13,8 +13,8 @@ namespace tag {
             if(!block_registry) {
                 std::cout << "block_registry is null\n";
             }
-            auto air_id = block_registry->get("core::air")->first;
-            auto stone_id = block_registry->get("core::stone")->first;
+            auto air_id = block_registry->get_id("core::air").value();
+            auto stone_id = block_registry->get_id("core::stone").value();
 
             auto coord_world = to_world_coord(coord_chunk);
 

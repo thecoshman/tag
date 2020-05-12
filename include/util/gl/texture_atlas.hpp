@@ -5,6 +5,7 @@
 #include <map>
 
 #include "util/opengl.hpp"
+#include "util/registry.hpp"
 
 namespace util{
     namespace gl{
@@ -22,7 +23,7 @@ namespace util{
             private:
             gldr::Texture2d texture;
 
-            std::map<std::string, MappedUV> textureMapping;
+            util::registry<MappedUV> textureMapping;
         };
     }
 }
