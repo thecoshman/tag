@@ -32,6 +32,7 @@ namespace tag {
 
         player.is_space_free_query = [&](util::AABB const& aabb){
             if(!world){
+                std::cout << "now orld [true]>" << std::endl;
                 return true;
             }
             auto potential_hits = get_overlapping_coords(aabb);
@@ -112,46 +113,16 @@ namespace tag {
         player.update(dt);
     }
 
-    void application::display(const gldr::Program& program, const gldr::VertexArray& vao){
-        vao.bind();
-        program.use();
-        GLint mvpMat = program.getUniformLocation("mvpMat");
-        GLint uvFrom = program.getUniformLocation("uvFrom");
-        GLint uvTo   = program.getUniformLocation("uvTo");
-        auto projectViewMatrix = cam.projectionMatrix() * cam.viewMatrix();
-
-        std::string current_texture;// = "null";
-
+    void application::display(){
         auto coord = voxel_grid::world_coord::fromGlmVec3(player.position);
 
         if(!world){
             std::cout << "Dude, there is no world\n";
+            return;
         }
 
         textureAtlas.bind();
-
-        for(auto chunk : world->get_display_chunks(0, coord, 2)){
-            for(auto block_coord_pair : chunk.renderable_blocks){
-                auto pos = block_coord_pair.first;
-                auto block = block_coord_pair.second;
-
-                auto modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x + 0.5, pos.y - 0.5, pos.z + 0.5));
-                gl::UniformMatrix4fv(mvpMat, 1, gl::FALSE, glm::value_ptr(projectViewMatrix * modelMatrix));
-
-                std::string desired_texture;
-                switch (block.type_id) {
-                    case 0: desired_texture = ""; break;
-                    case 1: desired_texture = "white_cube"; break;
-                    case 2: desired_texture = "red_cube"; break;
-                    case 3: desired_texture = "green_cube"; break;
-                }
-                auto uvCoords = textureAtlas.getUVCoords(desired_texture);
-                gl::Uniform2fv(uvFrom, 1, glm::value_ptr(glm::vec2{uvCoords.fromU, uvCoords.fromV}));
-                gl::Uniform2fv(uvTo, 1, glm::value_ptr(glm::vec2{uvCoords.toU, uvCoords.toV}));
-
-                gl::DrawElements(gl::TRIANGLES, 3 * 12, gl::UNSIGNED_INT, 0);
-            }
-        }
+        world->display_chunks(0, coord, 5, cam);
     }
 
     void application::load_game_world(){
@@ -178,24 +149,34 @@ namespace tag {
         type.set_flag(block_type_flag::can_be_replaced);
         type.set_flag(block_type_flag::passable);
         type.set_flag(block_type_flag::invisible);
+        type.renderingModel = block_rendering::InivisibleBlock{};
         block_registry->set("core::air", type);
 
+        auto coords = textureAtlas.getUVCoords("white_cube");
+        auto renderModel = block_rendering::SixSided{coords.fromU, coords.fromV, coords.toU, coords.toV};
         type = block_type{"core", "stone"};
         type.set_flag(block_type_flag::is_solid_block);
         type.set_flag(block_type_flag::fully_blocks_los);
         type.render_type = basic_cube_render_type{"white_cube"};
+        type.renderingModel = renderModel;
         block_registry->set("core::stone", type);
 
+        coords = textureAtlas.getUVCoords("red_cube");
+        renderModel = block_rendering::SixSided{coords.fromU, coords.fromV, coords.toU, coords.toV};
         type = block_type{"core", "dirt"};
         type.set_flag(block_type_flag::is_solid_block);
         type.set_flag(block_type_flag::fully_blocks_los);
         type.render_type = basic_cube_render_type{"red_cube"};
+        type.renderingModel = renderModel;
         block_registry->set("core::dirt", type);
 
+        coords = textureAtlas.getUVCoords("green_cube");
+        renderModel = block_rendering::SixSided{coords.fromU, coords.fromV, coords.toU, coords.toV};
         type = block_type{"core", "grass"};
         type.set_flag(block_type_flag::is_solid_block);
         type.set_flag(block_type_flag::passable);
         type.render_type = basic_cube_render_type{"green_cube"};
+        type.renderingModel = renderModel;
         block_registry->set("core::grass", type);
 
         world = std::make_unique<game_world>(block_registry);

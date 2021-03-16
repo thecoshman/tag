@@ -8,6 +8,7 @@
 #include "tag/voxel_grid/chunked_voxel_grid.hpp"
 #include "util/registry.hpp"
 #include "util/volumes.hpp"
+#include "util/camera.hpp"
 
 namespace tag {
     class game_world {
@@ -23,7 +24,7 @@ namespace tag {
 
         int add_dimenion(voxel_grid::chunk_generator generator);
 
-        std::vector<voxel_grid::display_chunk> get_display_chunks(unsigned int dimensionID, const voxel_grid::world_coord& coord_world, int range) const;
+        void display_chunks(unsigned int dimensionID, const voxel_grid::world_coord& coord_world, int range, const util::Camera& camera) const;
 
         void mine_blocks(unsigned int dimensionID, util::Ray& ray, int mining_power);
 

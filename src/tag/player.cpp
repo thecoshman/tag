@@ -1,4 +1,6 @@
 #include <tag/player.hpp>
+ 
+#include <iostream>
 
 namespace tag{
     void player::move(direction d){
@@ -99,7 +101,7 @@ namespace tag{
             velocity.y -= gravity * (dt/1000);
 
             auto aabb = util::AABB(proposed_position.x, proposed_position.y + (1.72/2), proposed_position.z, 0.8, 1.72, 0.8);
-            if(proposed_position.y >= 0.0f && is_space_free_query(aabb)){
+            if(is_space_free_query(aabb)){
                 position = proposed_position;
             } else {
                 grounded = true;

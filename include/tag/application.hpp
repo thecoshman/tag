@@ -20,7 +20,7 @@ namespace tag {
 
         void update(float dt);
 
-        void display(const gldr::Program& program, const gldr::VertexArray& vao);
+        void display();
 
         void load_game_world();
 

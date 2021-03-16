@@ -16,7 +16,8 @@ namespace tag {
         mod_name(mod_name), name(name),
         val_a(0), val_b(0), flags(0),
         on_break(default_on_break),
-        render_type(tag::null_render_type{}) {
+        render_type(tag::null_render_type{}),
+        renderingModel(tag::block_rendering::InivisibleBlock{}) {
     }
     
     void block_type::set_flag(block_type_flag flag, bool value) {

@@ -67,7 +67,6 @@ namespace tag {
     }
 
     void game_world::update(float dt){
-
     }
 
     int game_world::add_dimenion(voxel_grid::chunk_generator generator){
@@ -75,15 +74,17 @@ namespace tag {
         return dimensions.size();
     }
 
-    std::vector<voxel_grid::display_chunk> game_world::get_display_chunks(unsigned int dimensionID, const voxel_grid::world_coord& coord_world, int range) const {
+    void game_world::display_chunks(unsigned int dimensionID, const voxel_grid::world_coord& coord_world, int range, const util::Camera& camera) const {
         if(dimensionID > dimensions.size()) {
             std::cout << "attempted to get display chunks for a dimension that doesn't exist\n";
-            return std::vector<voxel_grid::display_chunk>();
+            // return std::vector<voxel_grid::display_chunk>();
+            return;
         }
         if(!block_registry) {
             std::cout << "We have no block_registry\n";
+            return;
         }
-       return dimensions[dimensionID].get_display_chunks(block_registry, coord_world, range);
+        dimensions[dimensionID].display_chunks(block_registry, coord_world, range, camera);
     }
 
     void game_world::mine_blocks(unsigned int dimensionID, util::Ray& ray, int mining_power) {

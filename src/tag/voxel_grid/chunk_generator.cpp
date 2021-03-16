@@ -35,7 +35,8 @@ namespace tag {
 
                         int h = value * chunk_size;
 
-                        auto is_stone = coord_chunk.y == 0 && y < 0.5 * chunk_size && y < h;
+                        auto world_y = coord_world.y + y;
+                        auto is_stone = world_y < h;
                         auto block_type_id = is_stone ? stone_id : air_id;
 
                         chunk_data.emplace_back(block_type_id, 0, 0, 0);

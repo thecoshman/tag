@@ -24,6 +24,18 @@ namespace tag {
         std::string texture_name;
     };
 
+    namespace block_rendering{
+        struct TextureCoords{
+            float fromU, fromV, toU, toV;
+        };
+
+        struct InivisibleBlock{};
+
+        struct SixSided{
+            TextureCoords textureCoords;
+        };        
+    }
+
     struct block_type {
         std::string mod_name, name;
         int val_a, val_b;
@@ -45,5 +57,10 @@ namespace tag {
         bool get_flag(block_type_flag flag) const;
 
         std::variant<tag::null_render_type, tag::basic_cube_render_type> render_type;
+
+        std::variant<
+            tag::block_rendering::InivisibleBlock,
+            tag::block_rendering::SixSided
+        > renderingModel;
     };
 }
