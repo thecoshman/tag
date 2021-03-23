@@ -8,6 +8,7 @@
 namespace tag {
     namespace voxel_grid {
         data_chunk chunk_generator::generate(const chunk_coord& coord_chunk) const {
+            std::cout << "Chunk generator running for (" << coord_chunk.x << "," << coord_chunk.y << "," << coord_chunk.z << ")\n";
             std::vector<block_instance> chunk_data;
             chunk_data.reserve(blocks_per_chunk);
             if(!block_registry) {
@@ -43,6 +44,7 @@ namespace tag {
                     }
                 }
             }
+            std::cout << "Chunk generator finished for (" << coord_chunk.x << "," << coord_chunk.y << "," << coord_chunk.z << ")\n";
             return data_chunk(chunk_data);
         }
     }

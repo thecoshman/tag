@@ -6,41 +6,78 @@
 #include <variant>
 #include <optional>
 
+#include <chrono>
+
 namespace {
     template <typename T>
     void append(std::vector<T>& left, const std::vector<T>& right) {
         left.reserve(left.size() + right.size());
         left.insert(left.end(), right.begin(), right.end());
     }
+
+    template<typename R>
+    bool is_ready(std::future<R> const& f) {
+        std::cout << "Attempting to get status of future for display chunk\n";
+        return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    }
 }
 
 namespace tag {
     namespace voxel_grid {
         display_chunk::display_chunk(std::shared_ptr<util::registry<block_type>> block_registry, const chunk_coord& coord_chunk, const data_chunk& chunk){
+            generationFuture = std::async(std::launch::async, generate, block_registry, coord_chunk, chunk);
+            // auto data = generate(block_registry, coord_chunk, chunk);
+        }
+
+        void display_chunk::display() {
+            std::cout << "Going to try draw chunk\n";
+            if (future_completed) {
+                std::cout << "display chunk is good to be drawn\n";
+                meshVAO.bind();
+                gl::DrawElements(gl::TRIANGLES, 6 * 2 * 3 * cubeCount, gl::UNSIGNED_INT, 0);
+            // } else if (is_ready(generationFuture) {
+            } else if (generationFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+                std::cout << "Future display chunk is ready\n";
+                auto data = generationFuture.get();
+                buffer_generated_data(data);
+                future_completed = true;
+            } else {
+                std::cout << "Future display chunk is not ready\n";
+            }
+        }
+
+        std::tuple<int, std::vector<GLuint>,std::vector<GLfloat>,std::vector<GLfloat>> display_chunk::generate(std::shared_ptr<util::registry<block_type>> block_registry, const chunk_coord& coord_chunk, const data_chunk& chunk){
             std::vector<GLuint> indexdata;
             std::vector<GLfloat> vertexPositions;
             std::vector<GLfloat> textureCoord;
-            cubeCount = 0;
+            int generatedCubeCount = 0;
 
             unsigned int verticesPerCube = 24;
 
             for(int x = 0; x < chunk_size; ++x){
                 for(int y = 0; y < chunk_size; ++y){
                     for(int z = 0; z < chunk_size; ++z){
+                        // std::cout << "Display chunk building block at (" << x << ", " << y << ", " << z << ")\n";
                         auto coord_intra_chunk = intra_chunk_coord{x, y, z};
                         if(needs_rendering(block_registry, chunk, coord_intra_chunk)){
-                            // renderable_blocks.insert({to_world_coord(coord_chunk, coord_intra_chunk), chunk.get_block(coord_intra_chunk)});
-                            // Push index and vertex data for this cube
-
-                            append(indexdata, generateCubeIndexNumbers(cubeCount * verticesPerCube));
+                            append(indexdata, generateCubeIndexNumbers(generatedCubeCount * verticesPerCube));
                             append(vertexPositions, generateCubeVertexPositions(coord_intra_chunk));
                             append(textureCoord, generateCubeTextureCoords(block_registry, chunk.get_block(coord_intra_chunk).type_id));
-
-                            cubeCount++;
+                            generatedCubeCount++;
                         }
                     }
                 }
             }
+            std::cout << "display chunk finished building data\n";
+            return std::make_tuple(generatedCubeCount, indexdata, vertexPositions, textureCoord);
+        }
+
+        void display_chunk::buffer_generated_data(std::tuple<int, std::vector<GLuint>,std::vector<GLfloat>,std::vector<GLfloat>> data) {
+            std::cout << "Buffering data into ogl\n";
+            auto [ generatedCubeCount, indexdata, vertexPositions, textureCoord ] = data;
+            
+            cubeCount = generatedCubeCount;
+
             meshVAO.bind();
 
             indexBuffer.bufferData(indexdata);
@@ -51,11 +88,7 @@ namespace tag {
             textureCoordBuffer.bufferData(textureCoord);
             gl::EnableVertexAttribArray(1);
             gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 0, 0);
-        }
-
-        void display_chunk::display() {
-            meshVAO.bind();
-            gl::DrawElements(gl::TRIANGLES, 6 * 2 * 3 * cubeCount, gl::UNSIGNED_INT, 0);
+            std::cout << "Finshed buffer into ogl\n";
         }
 
         bool display_chunk::needs_rendering(std::shared_ptr<util::registry<block_type>> block_registry, const data_chunk& chunk, const intra_chunk_coord& coord_intra_chunk){

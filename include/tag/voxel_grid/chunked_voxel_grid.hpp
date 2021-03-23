@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <map>
+#include <future>
+#include <optional>
 
 #include "util/collisionCheckers.hpp"
 
@@ -68,22 +70,23 @@ namespace tag {
                 }
             }
 
-            const block_instance& get_block(const world_coord& coord_world) const;
+            const std::optional<std::reference_wrapper<block_instance>> get_block(const world_coord& coord_world) const;
 
-            block_instance& get_block(const world_coord& coord_world);
+            std::optional<std::reference_wrapper<block_instance>> get_block(const world_coord& coord_world);
 
             void set_block(block_instance block, const world_coord& coord_world);
 
             void display_chunks(std::shared_ptr<util::registry<block_type>> block_registry, const world_coord& coord_world, int range, const util::Camera& camera) const;
 
             private:
-            data_chunk& get_data_chunk(const chunk_coord& coord) const;
-            display_chunk& get_display_chunk(std::shared_ptr<util::registry<block_type>> block_registry, const chunk_coord& coord) const;
+            std::optional<std::reference_wrapper<data_chunk>> get_data_chunk(const chunk_coord& coord) const;
+            std::optional<std::reference_wrapper<display_chunk>> get_display_chunk(std::shared_ptr<util::registry<block_type>> block_registry, const chunk_coord& coord) const;
 
             gldr::Program chunk_shader;
 
             chunk_generator generator;
             mutable std::map<chunk_coord, data_chunk> chunk_data;
+            mutable std::map<chunk_coord, std::future<data_chunk>> future_chunk_data;
             mutable std::map<chunk_coord, display_chunk> display_chunk_cache;
         };
     }

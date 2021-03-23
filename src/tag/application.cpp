@@ -120,9 +120,10 @@ namespace tag {
             std::cout << "Dude, there is no world\n";
             return;
         }
-
+        std::cout << "[APP] Display world\n";
         textureAtlas.bind();
-        world->display_chunks(0, coord, 5, cam);
+        world->display_chunks(0, coord, 0, cam);
+        std::cout << "[APP] Display world finished\n";
     }
 
     void application::load_game_world(){
