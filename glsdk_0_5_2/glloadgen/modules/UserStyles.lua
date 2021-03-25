@@ -1,4 +1,0 @@
-return
-{
-	glload = require("StyleGLLoad")
-}
