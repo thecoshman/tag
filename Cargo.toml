@@ -12,6 +12,7 @@ bytes = "1.0.1"
 futures = { version = "0.3.13", features = ["thread-pool"]}
 tokio = { version = "1.4.0", features = ["full"]}
 tokio-util = { version = "0.6.5", features = ["full"]}
+tokio-stream = "0.1.5"
 
 [lib]
 name = "common"
