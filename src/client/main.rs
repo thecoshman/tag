@@ -1,11 +1,16 @@
 #![warn(rust_2018_idioms)]
 
-use std::{error::Error, net::SocketAddr};
+use std::error::Error;
+use std::net::SocketAddr;
+use std::sync::Arc;
 
 use tokio::io;
+use tokio::net::UdpSocket;
 use tokio_util::codec::{BytesCodec, FramedRead, FramedWrite};
-use futures::StreamExt;
 
+use bytes::Bytes;
+
+use futures::{SinkExt, StreamExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -13,46 +18,57 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let addr = "127.0.0.1:40000".parse::<SocketAddr>()?;
 
-    let stdin = FramedRead::new(io::stdin(), BytesCodec::new()).map(|i|
-        i.map(|bytes|
-            bytes.freeze()
-        )
-    );
-    let stdout = FramedWrite::new(io::stdout(), BytesCodec::new());
+    let local_addr: SocketAddr = if addr.is_ipv4() {
+        "0.0.0.0:0"
+    } else {
+        "[::]:0"
+    }.parse()?;
 
-    tag::connect(&addr, stdin, stdout).await?;
+    let socket = UdpSocket::bind(local_addr).await?;
+    socket.connect(&addr).await?;
+    let recieve_socket = Arc::new(socket);
+    let send_socket = recieve_socket.clone();
+
+    let sender = tokio::spawn(async move {
+        let _ = send(&send_socket).await;
+    });
+    let reciever = tokio::spawn(async move {
+        let _ = recv(&recieve_socket).await;
+    });
+    let res = tokio::try_join!(sender, reciever);
+
+    if let Err(err) = res {
+        println!("error: {:?}", err);
+    }
 
     Ok(())
 }
 
-mod tag {
-    use bytes::Bytes;
-    use futures::{future, Sink, SinkExt, Stream, StreamExt};
-    use std::{error::Error, io, net::SocketAddr};
-    use tokio::net::TcpStream;
-    use tokio_util::codec::{BytesCodec, FramedRead, FramedWrite};
+async fn send(socket: &UdpSocket) -> Result<(), io::Error> {
+    let mut stdin = FramedRead::new(io::stdin(), BytesCodec::new()).map(|i|
+        i.map(|bytes|
+            bytes.freeze()
+        )
+    );
 
-    pub async fn connect(
-        addr: &SocketAddr,
-        mut stdin: impl Stream<Item = Result<Bytes, io::Error>> + Unpin,
-        mut stdout: impl Sink<Bytes, Error = io::Error> + Unpin,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut stream = TcpStream::connect(addr).await?;
-        let (r, w) = stream.split();
-        let mut sink = FramedWrite::new(w, BytesCodec::new());
-        let mut stream = FramedRead::new(r, BytesCodec::new()).filter_map(|i|
-            match i {
-                Ok(i) => future::ready(Some(i.freeze())),
-                Err(e) => {
-                    println!("Socket read error: {}", e);
-                    future::ready(None)
-                }
-            }
-        ).map(Ok);
+    while let Some(text) = stdin.next().await {
+        let buf = text?;
+        socket.send(&buf[..]).await?;
+    }
 
-        match future::join(sink.send_all(&mut stdin), stdout.send_all(&mut stream)).await {
-            (Err(e), _) | (_, Err(e)) => Err(e.into()),
-            _ => Ok(()),
+    Ok(())
+}
+
+async fn recv(socket: &UdpSocket) -> Result<(), io::Error> {
+    let mut stdout = FramedWrite::new(io::stdout(), BytesCodec::new());
+
+    loop {
+        let mut buf = vec![0; 1024];
+        let bytes_recieved = socket.recv(&mut buf[..]).await?;
+
+        if bytes_recieved > 0 {
+            print!("> ");
+            stdout.send(Bytes::from(buf)).await?;
         }
     }
 }
