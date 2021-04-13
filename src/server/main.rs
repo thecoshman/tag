@@ -11,13 +11,14 @@ use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::io;
 use tokio::sync::{mpsc, Mutex};
-// use tokio_stream::StreamExt;
 use tokio_util::codec::BytesCodec;
 use tokio_util::udp::UdpFramed;
 
 use bytes::Bytes;
 use bytes::BytesMut;
 use futures::{FutureExt, SinkExt, StreamExt};
+
+use common::network::Message;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -37,11 +38,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // perr_packets_rx => Read by the server to know when there's packets to send for a peer
 
     // Send any outgoing packets
+    let sending_task_peers = peers.clone();
     let packet_sending_task = tokio::spawn(async move {
         println!("Packet sender task started");
-        while let Some((bytes, address)) = peer_packets_rx.recv().await {
+        while let Some((message, address)) = peer_packets_rx.recv().await {
             println!("Sending a packet to {:?}", address);
-            let _ = sink.send((Bytes::from(bytes), address)).await;
+            match message {
+                Message::RequestToJoin => {}
+                Message::ServerMessage(msg) => {
+                    let _ = sink.send((Bytes::from(msg), address)).await;
+                }
+                Message::SetNickName(_) => {}
+                Message::ChatMessage(msg) => {
+                    let mut peers  = sending_task_peers.lock().await;
+                    for peer in peers.iter_mut() {
+                        if *peer.0 != address {
+                            let _ = sink.send((Bytes::from(msg.clone()), *peer.0)).await;
+                        }
+                    }
+                }
+            }
         }
     });
 
@@ -75,12 +91,12 @@ enum PeerState {
 #[derive(Debug)]
 struct Peer {
     state: PeerState,
-    packet_tx: mpsc::UnboundedSender<(Bytes, SocketAddr)>, // given to the peer so that it can request packets be sent
+    packet_tx: mpsc::UnboundedSender<(Message, SocketAddr)>, // given to the peer so that it can request packets be sent
     name: String,
 }
 
 impl Peer {
-    fn new(tx: mpsc::UnboundedSender<(Bytes, SocketAddr)>) -> Self {
+    fn new(tx: mpsc::UnboundedSender<(Message, SocketAddr)>) -> Self {
         Peer {
             state: PeerState::New,
             packet_tx: tx,
@@ -92,24 +108,21 @@ impl Peer {
         println!("Processing packet from {:?} in {:?} state.", &remote_address, self.state);
 
         // Do basic verification to make sure this packet really is valid etc
-
         match self.state {
             PeerState::New => {
-                let _ = self.packet_tx.send((Bytes::from("Welcome, please give your name\n"), remote_address));
+                let _ = self.packet_tx.send((Message::ServerMessage("Welcome, please give your name\n".to_string()), remote_address));
                 self.state = PeerState::Awaiting_Name;
             }
             PeerState::Awaiting_Name => {
                 self.name = String::from_utf8((&bytes).to_vec()).unwrap();
-                let _ = self.packet_tx.send((Bytes::from("Enjoy the chat :)\n"), remote_address));                
+                let _ = self.packet_tx.send((Message::ServerMessage("Enjoy the chat :)\n".to_string()), remote_address));
                 self.state = PeerState::Joined;
             }
             PeerState::Joined => {
-                let _ = self.packet_tx.send((Bytes::from(bytes), remote_address));                
+                let _ = self.packet_tx.send((Message::ChatMessage(String::from_utf8((&bytes).to_vec()).unwrap()), remote_address));
             }
         }
 
         Ok(())
     }
-
-    // We need to setup a loop 
 }

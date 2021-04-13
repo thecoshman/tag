@@ -11,5 +11,10 @@ pub mod network {
     // pub const DEFAULT_SERVER_PORT = "40000";
     pub const MAX_DATAGRAM_SIZE: usize = 65_507;
 
-    // enum Frame {}
+    pub enum Message {
+        RequestToJoin,
+        ServerMessage(String),
+        SetNickName(String),
+        ChatMessage(String),
+    }
 }
