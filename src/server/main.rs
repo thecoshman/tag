@@ -11,74 +11,105 @@ use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::io;
 use tokio::sync::{mpsc, Mutex};
-use tokio_stream::StreamExt;
+// use tokio_stream::StreamExt;
 use tokio_util::codec::BytesCodec;
 use tokio_util::udp::UdpFramed;
 
 use bytes::Bytes;
 use bytes::BytesMut;
-use futures::{FutureExt, SinkExt};
+use futures::{FutureExt, SinkExt, StreamExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     println!("TAG v{} Server starting...", common::VERSION);
 
     let addr = "127.0.0.1:40000";
-    let server = Arc::new(Mutex::new(Server::new(addr)));
 
-    loop {
-        let server = Arc::clone(&server);
-        let (bytes, remote) = server.lock().await.socket.next().map(|e| e.unwrap()).await?;
-        tokio::spawn(async move {
-            let peer = server.lock().await.peers.entry(remote).or_insert(Peer::new());
-            peer.process_packet(server.clone(), bytes, remote).await 
-        });
-    }
-}
-
-struct Server {
-    socket: UdpFramed<BytesCodec>,
-    peers: HashMap<SocketAddr, Peer>,
-}
-
-impl Server {
-    async fn new(listen_on: &str) -> Result<Self, io::Error> {
-        let raw_socket = UdpSocket::bind(&listen_on).await?;
+    let (mut sink, mut stream) = {
+        let raw_socket = UdpSocket::bind(&addr).await?;
         let framed_socket = UdpFramed::new(raw_socket, BytesCodec::new());
-        println!("Listening on: {}", listen_on);
+        println!("Listening on: {}", addr);
+        framed_socket.split()
+    };
+    let peers = Arc::new(Mutex::new(HashMap::new()));
+    let (peer_packets_tx, mut peer_packets_rx) = mpsc::unbounded_channel();  
+    // peer_packets_tx => Cloned for each peer to request packets be sent
+    // perr_packets_rx => Read by the server to know when there's packets to send for a peer
 
-        Ok(Server {
-            socket: framed_socket,
-            peers: HashMap::new(),
-        })
-    }
+    // Send any outgoing packets
+    let packet_sending_task = tokio::spawn(async move {
+        println!("Packet sender task started");
+        while let Some((bytes, address)) = peer_packets_rx.recv().await {
+            println!("Sending a packet to {:?}", address);
+            let _ = sink.send((Bytes::from(bytes), address)).await;
+        }
+    });
+
+    // Handle any incoming packets
+    let packet_receving_task = tokio::spawn(async move {
+        println!("Waiting for a new packet to come into server");
+        while let Ok((bytes, remote)) = stream.next().map(|e| e.unwrap()).await {
+            println!("Got a packet from {:?}", remote);
+            // In order to keep this fast, we don't even verify packets, just find the 'peer' and give it the packet to deal with
+            // Might need to do _some_ validation here if it requires server wide data
+            let mut peers  = peers.lock().await;
+            let peer = peers.entry(remote).or_insert({
+                Peer::new(peer_packets_tx.clone())
+            });
+            let _ = peer.process_packet(bytes, remote).await;
+        }
+    });
+
+    let _ = tokio::try_join!(packet_sending_task, packet_receving_task);
+
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
 enum PeerState {
     New,
+    Awaiting_Name,
+    Joined,
 }
 
 #[derive(Debug)]
 struct Peer {
-    state: PeerState,    
+    state: PeerState,
+    packet_tx: mpsc::UnboundedSender<(Bytes, SocketAddr)>, // given to the peer so that it can request packets be sent
+    name: String,
 }
 
 impl Peer {
-    fn new() -> Self {
+    fn new(tx: mpsc::UnboundedSender<(Bytes, SocketAddr)>) -> Self {
         Peer {
             state: PeerState::New,
+            packet_tx: tx,
+            name: "".to_string(),
         }
     }
 
-    async fn process_packet(&mut self, server: Arc<Mutex<Server>>, bytes: BytesMut, remote_address: SocketAddr) -> Result<(), io::Error> {
+    async fn process_packet(&mut self, bytes: BytesMut, remote_address: SocketAddr) -> Result<(), io::Error> {
         println!("Processing packet from {:?} in {:?} state.", &remote_address, self.state);
+
+        // Do basic verification to make sure this packet really is valid etc
+
         match self.state {
             PeerState::New => {
-                server.lock().await.socket.send((Bytes::from(bytes), remote_address));
+                let _ = self.packet_tx.send((Bytes::from("Welcome, please give your name\n"), remote_address));
+                self.state = PeerState::Awaiting_Name;
+            }
+            PeerState::Awaiting_Name => {
+                self.name = String::from_utf8((&bytes).to_vec()).unwrap();
+                let _ = self.packet_tx.send((Bytes::from("Enjoy the chat :)\n"), remote_address));                
+                self.state = PeerState::Joined;
+            }
+            PeerState::Joined => {
+                let _ = self.packet_tx.send((Bytes::from(bytes), remote_address));                
             }
         }
 
         Ok(())
     }
+
+    // We need to setup a loop 
 }
