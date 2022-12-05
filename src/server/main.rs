@@ -114,12 +114,12 @@ impl Peer {
                 self.state = PeerState::Awaiting_Name;
             }
             PeerState::Awaiting_Name => {
-                self.name = String::from_utf8((&bytes).to_vec()).unwrap();
+                self.name = String::from_utf8(bytes.to_vec()).unwrap();
                 let _ = self.packet_tx.send((Message::ServerMessage("Enjoy the chat :)\n".to_string()), remote_address));
                 self.state = PeerState::Joined;
             }
             PeerState::Joined => {
-                let _ = self.packet_tx.send((Message::ChatMessage(String::from_utf8((&bytes).to_vec()).unwrap()), remote_address));
+                let _ = self.packet_tx.send((Message::ChatMessage(String::from_utf8(bytes.to_vec()).unwrap()), remote_address));
             }
         }
 
